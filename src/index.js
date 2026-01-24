@@ -14,6 +14,15 @@ if (!token) {
 
 const bot = new Telegraf(token);
 
+bot.telegram
+  .setMyCommands([
+    { command: 'add', description: 'Добавить отжимания за сегодня' },
+    { command: 'status', description: 'Показать статус за дату' },
+  ])
+  .catch((error) => {
+    console.error('Failed to set bot commands:', error);
+  });
+
 function formatDisplayName(row) {
   if (row.username) {
     return `@${row.username}`;
