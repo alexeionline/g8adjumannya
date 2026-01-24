@@ -62,7 +62,7 @@ function parseAdd(text) {
   }
 
   const value = Number.parseInt(match[1], 10);
-  if (!Number.isFinite(value) || value <= 0) {
+  if (!Number.isFinite(value) || value < 0) {
     return null;
   }
 
@@ -114,6 +114,10 @@ async function handleAdd(ctx, value) {
     date: today,
     delta: value,
   });
+
+  if (value === 0) {
+    return ctx.reply('Отметил участие. Ты на правильном пути, но надо лучше стараться!');
+  }
 
   if (total >= 100) {
     return ctx.reply(`Поздравляю! Сегодняшний челлендж закрыт. Итого: ${total}.`);
