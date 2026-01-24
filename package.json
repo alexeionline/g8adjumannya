@@ -1,0 +1,18 @@
+{
+  "name": "g8adjumannya",
+  "version": "1.0.0",
+  "description": "Бот для группового чата друзей (около 10 человек), чтобы отслеживать ежедневный челлендж на 100 отжиманий.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "dayjs": "^1.11.19",
+    "dotenv": "^17.2.3",
+    "telegraf": "^4.16.3"
+  }
+}
