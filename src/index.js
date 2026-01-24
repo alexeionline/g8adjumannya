@@ -153,7 +153,9 @@ bot.command('add', async (ctx) => {
     return handleAdd(ctx, value);
   }
 
-  await ctx.reply('Сколько отжиманий добавить?');
+  await ctx.reply('Сколько отжиманий добавить?', {
+    reply_markup: { force_reply: true, selective: true },
+  });
   ctx.session = {
     ...ctx.session,
     waitingForAdd: true,
@@ -187,7 +189,16 @@ bot.on('text', async (ctx) => {
     return;
   }
 
-  if (ctx.session && ctx.session.waitingForAdd) {
+  const reply = ctx.message && ctx.message.reply_to_message;
+  const isReplyToAddPrompt =
+    reply &&
+    reply.from &&
+    ctx.botInfo &&
+    reply.from.id === ctx.botInfo.id &&
+    typeof reply.text === 'string' &&
+    reply.text.startsWith('Сколько отжиманий добавить');
+
+  if ((ctx.session && ctx.session.waitingForAdd) || isReplyToAddPrompt) {
     if (ctx.session.waitingForAddUntil && Date.now() > ctx.session.waitingForAddUntil) {
       ctx.session.waitingForAdd = false;
       delete ctx.session.waitingForAddUntil;
