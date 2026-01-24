@@ -27,12 +27,27 @@ function formatDisplayName(row) {
   return `User ${row.user_id}`;
 }
 
+function stripLeadingMention(text) {
+  if (!text) {
+    return text;
+  }
+
+  const trimmed = text.trim();
+  const match = trimmed.match(/^@\w+\s+/);
+  if (!match) {
+    return trimmed;
+  }
+
+  return trimmed.slice(match[0].length);
+}
+
 function parseAdd(text) {
   if (!text) {
     return null;
   }
 
-  const match = text.match(/\/?add(?:@\w+)?\s+(\d+)/i);
+  const normalized = stripLeadingMention(text);
+  const match = normalized.match(/\/?add(?:@\w+)?\s+(\d+)/i);
   if (!match) {
     return null;
   }
@@ -50,7 +65,8 @@ function parseStatusDate(text) {
     return null;
   }
 
-  const match = text.match(/\/?status(?:@\w+)?(?:\s+(\d{2}\.\d{2}\.\d{4}))?/i);
+  const normalized = stripLeadingMention(text);
+  const match = normalized.match(/\/?status(?:@\w+)?(?:\s+(\d{2}\.\d{2}\.\d{4}))?/i);
   if (!match) {
     return null;
   }
@@ -79,12 +95,7 @@ bot.start((ctx) => {
   );
 });
 
-bot.command('add', (ctx) => {
-  const value = parseAdd(ctx.message && ctx.message.text);
-  if (!value) {
-    return ctx.reply('Формат: add X (X — положительное число).');
-  }
-
+function handleAdd(ctx, value) {
   upsertUser(ctx.from);
 
   const today = dayjs().format('YYYY-MM-DD');
@@ -100,14 +111,9 @@ bot.command('add', (ctx) => {
   }
 
   return ctx.reply(`Добавил ${value}. Текущий результат: ${total}/100.`);
-});
+}
 
-bot.command('status', (ctx) => {
-  const parsed = parseStatusDate(ctx.message && ctx.message.text);
-  if (!parsed) {
-    return ctx.reply('Формат: status или status DD.MM.YYYY.');
-  }
-
+function handleStatus(ctx, parsed) {
   if (parsed.error) {
     return ctx.reply(parsed.error);
   }
@@ -124,6 +130,41 @@ bot.command('status', (ctx) => {
   });
 
   return ctx.reply([`Статус на ${parsed.label}`, '', ...lines].join('\n'));
+}
+
+bot.command('add', (ctx) => {
+  const value = parseAdd(ctx.message && ctx.message.text);
+  if (!value) {
+    return ctx.reply('Формат: add X (X — положительное число).');
+  }
+
+  return handleAdd(ctx, value);
+});
+
+bot.command('status', (ctx) => {
+  const parsed = parseStatusDate(ctx.message && ctx.message.text);
+  if (!parsed) {
+    return ctx.reply('Формат: status или status DD.MM.YYYY.');
+  }
+
+  return handleStatus(ctx, parsed);
+});
+
+bot.on('text', (ctx) => {
+  const text = ctx.message && ctx.message.text;
+  if (!text || text.trim().startsWith('/')) {
+    return;
+  }
+
+  const value = parseAdd(text);
+  if (value) {
+    return handleAdd(ctx, value);
+  }
+
+  const parsed = parseStatusDate(text);
+  if (parsed) {
+    return handleStatus(ctx, parsed);
+  }
 });
 
 bot.launch();
