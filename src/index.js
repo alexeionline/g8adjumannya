@@ -148,26 +148,16 @@ async function handleStatus(ctx, parsed) {
 }
 
 bot.command('add', async (ctx) => {
-  await ctx.reply('Сколько отжиманий добавить?');
-  const waitingUntil = Date.now() + 15_000;
-  const existingTimeout = ctx.session && ctx.session.waitingForAddTimeoutId;
-  if (existingTimeout) {
-    clearTimeout(existingTimeout);
+  const value = parseAdd(ctx.message && ctx.message.text);
+  if (Number.isFinite(value)) {
+    return handleAdd(ctx, value);
   }
 
-  const timeoutId = setTimeout(() => {
-    if (ctx.session && ctx.session.waitingForAddUntil === waitingUntil) {
-      ctx.session.waitingForAdd = false;
-      delete ctx.session.waitingForAddUntil;
-      delete ctx.session.waitingForAddTimeoutId;
-    }
-  }, 15_000);
-
+  await ctx.reply('Сколько отжиманий добавить?');
   ctx.session = {
     ...ctx.session,
     waitingForAdd: true,
-    waitingForAddUntil: waitingUntil,
-    waitingForAddTimeoutId: timeoutId,
+    waitingForAddUntil: Date.now() + 15_000,
   };
 });
 
@@ -176,13 +166,8 @@ bot.command('cancel', async (ctx) => {
     return ctx.reply('Сейчас нет активного ожидания.');
   }
 
-  if (ctx.session.waitingForAddTimeoutId) {
-    clearTimeout(ctx.session.waitingForAddTimeoutId);
-  }
-
   ctx.session.waitingForAdd = false;
   delete ctx.session.waitingForAddUntil;
-  delete ctx.session.waitingForAddTimeoutId;
 
   return ctx.reply('Ожидание отменено.');
 });
@@ -204,13 +189,8 @@ bot.on('text', async (ctx) => {
 
   if (ctx.session && ctx.session.waitingForAdd) {
     if (ctx.session.waitingForAddUntil && Date.now() > ctx.session.waitingForAddUntil) {
-      if (ctx.session.waitingForAddTimeoutId) {
-        clearTimeout(ctx.session.waitingForAddTimeoutId);
-      }
-
       ctx.session.waitingForAdd = false;
       delete ctx.session.waitingForAddUntil;
-      delete ctx.session.waitingForAddTimeoutId;
 
       return ctx.reply('Время ожидания истекло. Введи /add, чтобы начать заново.');
     }
@@ -224,13 +204,8 @@ bot.on('text', async (ctx) => {
       return ctx.reply('Число должно быть нулевым или положительным.');
     }
 
-    if (ctx.session.waitingForAddTimeoutId) {
-      clearTimeout(ctx.session.waitingForAddTimeoutId);
-    }
-
     ctx.session.waitingForAdd = false;
     delete ctx.session.waitingForAddUntil;
-    delete ctx.session.waitingForAddTimeoutId;
     return handleAdd(ctx, value);
   }
 
