@@ -54,7 +54,7 @@
 
 ## Техническая реализация
 - Бот: Telegram Bot API через `telegraf`
-- Хранение: SQLite (файл `data/bot.sqlite`)
+- Хранение: PostgreSQL (Railway Postgres)
 - Даты: `dayjs`
 - Режим работы: polling
 
@@ -65,15 +65,16 @@
 
 ## Переменные окружения
 - `BOT_TOKEN` — токен Telegram бота
-- `DATABASE_PATH` — путь к SQLite файлу (опционально, по умолчанию `./data/bot.sqlite`)
+- `DATABASE_URL` — строка подключения к Postgres
+- `PGSSLMODE=disable` — опционально для локальной базы без SSL
 
 ## Деплой в Railway (polling)
 1. Создать проект в Railway и подключить GitHub репозиторий.
-2. В разделе **Variables** добавить:
+2. Добавить **Postgres** к проекту (New → Database → Postgres).
+3. В разделе **Variables** добавить:
    - `BOT_TOKEN`
-   - `DATABASE_PATH=./data/bot.sqlite` (опционально)
-3. В разделе **Deployments** убедиться, что команда запуска: `npm start`.
-4. Для сохранения базы между рестартами подключить Volume и примонтировать его к `./data`.
+   - `DATABASE_URL` (Railway добавит автоматически при подключении Postgres)
+4. В разделе **Deployments** убедиться, что команда запуска: `npm start`.
 
 **Важно:** токен хранится только в переменных окружения Railway и не должен попадать в репозиторий.
 

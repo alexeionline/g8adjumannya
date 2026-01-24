@@ -3,7 +3,7 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
-const { addCount, getStatusByDate, upsertUser } = require('./db');
+const { addCount, getStatusByDate, initDb, upsertUser } = require('./db');
 
 dayjs.extend(customParseFormat);
 
@@ -104,11 +104,11 @@ bot.start((ctx) => {
   );
 });
 
-function handleAdd(ctx, value) {
-  upsertUser(ctx.from);
+async function handleAdd(ctx, value) {
+  await upsertUser(ctx.from);
 
   const today = dayjs().format('YYYY-MM-DD');
-  const total = addCount({
+  const total = await addCount({
     chatId: ctx.chat.id,
     userId: ctx.from.id,
     date: today,
@@ -122,12 +122,12 @@ function handleAdd(ctx, value) {
   return ctx.reply(`Добавил ${value}. Текущий результат: ${total}/100.`);
 }
 
-function handleStatus(ctx, parsed) {
+async function handleStatus(ctx, parsed) {
   if (parsed.error) {
     return ctx.reply(parsed.error);
   }
 
-  const rows = getStatusByDate(ctx.chat.id, parsed.date);
+  const rows = await getStatusByDate(ctx.chat.id, parsed.date);
   if (!rows.length) {
     return ctx.reply(`Результатов за ${parsed.label} нет.`);
   }
@@ -141,7 +141,7 @@ function handleStatus(ctx, parsed) {
   return ctx.reply([`Статус на ${parsed.label}`, '', ...lines].join('\n'));
 }
 
-bot.command('add', (ctx) => {
+bot.command('add', async (ctx) => {
   const value = parseAdd(ctx.message && ctx.message.text);
   if (!value) {
     return ctx.reply('Формат: add X (X — положительное число).');
@@ -150,7 +150,7 @@ bot.command('add', (ctx) => {
   return handleAdd(ctx, value);
 });
 
-bot.command('status', (ctx) => {
+bot.command('status', async (ctx) => {
   const parsed = parseStatusDate(ctx.message && ctx.message.text);
   if (!parsed) {
     return ctx.reply('Формат: status или status DD.MM.YYYY.');
@@ -159,7 +159,7 @@ bot.command('status', (ctx) => {
   return handleStatus(ctx, parsed);
 });
 
-bot.on('text', (ctx) => {
+bot.on('text', async (ctx) => {
   const text = ctx.message && ctx.message.text;
   if (!text || text.trim().startsWith('/')) {
     return;
@@ -176,7 +176,15 @@ bot.on('text', (ctx) => {
   }
 });
 
-bot.launch();
+async function start() {
+  await initDb();
+  await bot.launch();
+}
+
+start().catch((error) => {
+  console.error('Не удалось запустить бота:', error);
+  process.exit(1);
+});
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));

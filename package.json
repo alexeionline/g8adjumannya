@@ -10,9 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^12.6.2",
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
+    "pg": "^8.17.2",
     "telegraf": "^4.16.3"
   }
 }
