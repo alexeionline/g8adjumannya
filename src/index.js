@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const { Telegraf } = require('telegraf');
+const { Telegraf, session } = require('telegraf');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const { addCount, getStatusByDate, initDb, upsertUser } = require('./db');
@@ -13,6 +13,8 @@ if (!token) {
 }
 
 const bot = new Telegraf(token);
+
+bot.use(session());
 
 bot.telegram
   .setMyCommands([
@@ -146,12 +148,43 @@ async function handleStatus(ctx, parsed) {
 }
 
 bot.command('add', async (ctx) => {
-  const value = parseAdd(ctx.message && ctx.message.text);
-  if (!value) {
-    return ctx.reply('Формат: add X (X — положительное число).');
+  await ctx.reply('Сколько отжиманий добавить?');
+  const waitingUntil = Date.now() + 15_000;
+  const existingTimeout = ctx.session && ctx.session.waitingForAddTimeoutId;
+  if (existingTimeout) {
+    clearTimeout(existingTimeout);
   }
 
-  return handleAdd(ctx, value);
+  const timeoutId = setTimeout(() => {
+    if (ctx.session && ctx.session.waitingForAddUntil === waitingUntil) {
+      ctx.session.waitingForAdd = false;
+      delete ctx.session.waitingForAddUntil;
+      delete ctx.session.waitingForAddTimeoutId;
+    }
+  }, 15_000);
+
+  ctx.session = {
+    ...ctx.session,
+    waitingForAdd: true,
+    waitingForAddUntil: waitingUntil,
+    waitingForAddTimeoutId: timeoutId,
+  };
+});
+
+bot.command('cancel', async (ctx) => {
+  if (!ctx.session || !ctx.session.waitingForAdd) {
+    return ctx.reply('Сейчас нет активного ожидания.');
+  }
+
+  if (ctx.session.waitingForAddTimeoutId) {
+    clearTimeout(ctx.session.waitingForAddTimeoutId);
+  }
+
+  ctx.session.waitingForAdd = false;
+  delete ctx.session.waitingForAddUntil;
+  delete ctx.session.waitingForAddTimeoutId;
+
+  return ctx.reply('Ожидание отменено.');
 });
 
 bot.command('status', async (ctx) => {
@@ -167,6 +200,38 @@ bot.on('text', async (ctx) => {
   const text = ctx.message && ctx.message.text;
   if (!text || text.trim().startsWith('/')) {
     return;
+  }
+
+  if (ctx.session && ctx.session.waitingForAdd) {
+    if (ctx.session.waitingForAddUntil && Date.now() > ctx.session.waitingForAddUntil) {
+      if (ctx.session.waitingForAddTimeoutId) {
+        clearTimeout(ctx.session.waitingForAddTimeoutId);
+      }
+
+      ctx.session.waitingForAdd = false;
+      delete ctx.session.waitingForAddUntil;
+      delete ctx.session.waitingForAddTimeoutId;
+
+      return ctx.reply('Время ожидания истекло. Введи /add, чтобы начать заново.');
+    }
+
+    const value = Number.parseInt(text, 10);
+    if (!Number.isFinite(value)) {
+      return ctx.reply('Введи число.');
+    }
+
+    if (value < 0) {
+      return ctx.reply('Число должно быть нулевым или положительным.');
+    }
+
+    if (ctx.session.waitingForAddTimeoutId) {
+      clearTimeout(ctx.session.waitingForAddTimeoutId);
+    }
+
+    ctx.session.waitingForAdd = false;
+    delete ctx.session.waitingForAddUntil;
+    delete ctx.session.waitingForAddTimeoutId;
+    return handleAdd(ctx, value);
   }
 
   const value = parseAdd(text);
