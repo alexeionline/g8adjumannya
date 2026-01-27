@@ -3,7 +3,15 @@ require('dotenv').config();
 const { Telegraf, session } = require('telegraf');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
-const { addCount, getStatusByDate, initDb, upsertUser } = require('./db');
+const {
+  addCount,
+  getChatRecord,
+  getRecordsByChat,
+  getStatusByDate,
+  initDb,
+  updateRecord,
+  upsertUser,
+} = require('./db');
 
 dayjs.extend(customParseFormat);
 
@@ -19,6 +27,7 @@ bot.use(session());
 bot.telegram
   .setMyCommands([
     { command: 'add', description: 'Добавить отжимания за сегодня' },
+    { command: 'record', description: 'Показать рекорды чата' },
     { command: 'status', description: 'Показать статус за дату' },
   ])
   .catch((error) => {
@@ -116,6 +125,12 @@ async function handleAdd(ctx, value) {
     date: today,
     delta: value,
   });
+  await updateRecord({
+    chatId: ctx.chat.id,
+    userId: ctx.from.id,
+    count: total,
+    date: today,
+  });
 
   if (value === 0) {
     return ctx.reply('Отметил участие. Ты на правильном пути, но надо лучше стараться!');
@@ -126,6 +141,29 @@ async function handleAdd(ctx, value) {
   }
 
   return ctx.reply(`Добавил ${value}. Текущий результат: ${total}/100.`);
+}
+
+async function handleRecord(ctx) {
+  const records = await getRecordsByChat(ctx.chat.id);
+  if (!records.length) {
+    return ctx.reply('Рекордов пока нет.');
+  }
+
+  const chatRecord = await getChatRecord(ctx.chat.id);
+  const chatTop =
+    chatRecord.length > 0
+      ? `${chatRecord[0].record_count} отжиманий — ${chatRecord
+          .map((row) => formatDisplayName(row))
+          .join(', ')} (${dayjs(chatRecord[0].record_date).format('DD.MM.YYYY')})`
+      : 'Рекорд чата пока не установлен.';
+
+  const lines = records.map((row, index) => {
+    const name = formatDisplayName(row);
+    const date = dayjs(row.record_date).format('DD.MM.YYYY');
+    return `${index + 1}. ${name} — ${row.record_count} (${date})`;
+  });
+
+  return ctx.reply(['Рекорды чата', `Общий рекорд: ${chatTop}`, '', ...lines].join('\n'));
 }
 
 async function handleStatus(ctx, parsed) {
@@ -181,6 +219,10 @@ bot.command('status', async (ctx) => {
   }
 
   return handleStatus(ctx, parsed);
+});
+
+bot.command('record', async (ctx) => {
+  return handleRecord(ctx);
 });
 
 bot.on('text', async (ctx) => {
