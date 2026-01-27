@@ -36,6 +36,7 @@ async function initDb() {
       max_add INTEGER NOT NULL DEFAULT 0,
       record_count INTEGER NOT NULL DEFAULT 0,
       record_date DATE NOT NULL,
+      max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE,
       updated_at TIMESTAMPTZ NOT NULL,
       PRIMARY KEY (chat_id, user_id),
       FOREIGN KEY (user_id) REFERENCES users (user_id)
@@ -62,7 +63,24 @@ async function initDb() {
         ALTER TABLE records ADD COLUMN record_count INTEGER NOT NULL DEFAULT 0;
         UPDATE records SET record_count = max_add;
       END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'records' AND column_name = 'max_add_initialized'
+      ) THEN
+        ALTER TABLE records ADD COLUMN max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE;
+      END IF;
     END $$;
+  `);
+
+  await pool.query(`
+    UPDATE records
+    SET max_add = 0,
+        record_count = 0,
+        record_date = CURRENT_DATE,
+        max_add_initialized = TRUE
+    WHERE max_add_initialized IS DISTINCT FROM TRUE;
   `);
 }
 
@@ -107,8 +125,16 @@ async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
   await pool.query(
     `
-      INSERT INTO records (chat_id, user_id, max_add, record_count, record_date, updated_at)
-      VALUES ($1, $2, $3, $3, $4, $5)
+      INSERT INTO records (
+        chat_id,
+        user_id,
+        max_add,
+        record_count,
+        record_date,
+        max_add_initialized,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $3, $4, TRUE, $5)
       ON CONFLICT(chat_id, user_id) DO UPDATE SET
         max_add = GREATEST(records.max_add, excluded.max_add),
         record_count = GREATEST(records.record_count, excluded.record_count),
@@ -116,6 +142,7 @@ async function updateRecord({ chatId, userId, count, date }) {
           WHEN excluded.max_add > records.max_add THEN excluded.record_date
           ELSE records.record_date
         END,
+        max_add_initialized = TRUE,
         updated_at = excluded.updated_at
     `,
     [chatId, userId, count, date, now]
