@@ -33,7 +33,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS records (
       chat_id BIGINT NOT NULL,
       user_id BIGINT NOT NULL,
-      record_count INTEGER NOT NULL DEFAULT 0,
+      max_add INTEGER NOT NULL DEFAULT 0,
       record_date DATE NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       PRIMARY KEY (chat_id, user_id),
@@ -42,16 +42,16 @@ async function initDb() {
   `);
 
   await pool.query(`
-    INSERT INTO records (chat_id, user_id, record_count, record_date, updated_at)
-    SELECT DISTINCT ON (dc.chat_id, dc.user_id)
-      dc.chat_id,
-      dc.user_id,
-      dc.count,
-      dc.date,
-      NOW()
-    FROM daily_counts dc
-    ORDER BY dc.chat_id, dc.user_id, dc.count DESC, dc.date ASC
-    ON CONFLICT (chat_id, user_id) DO NOTHING;
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'records' AND column_name = 'record_count'
+      ) THEN
+        ALTER TABLE records RENAME COLUMN record_count TO max_add;
+      END IF;
+    END $$;
   `);
 }
 
@@ -96,12 +96,12 @@ async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
   await pool.query(
     `
-      INSERT INTO records (chat_id, user_id, record_count, record_date, updated_at)
+      INSERT INTO records (chat_id, user_id, max_add, record_date, updated_at)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT(chat_id, user_id) DO UPDATE SET
-        record_count = GREATEST(records.record_count, excluded.record_count),
+        max_add = GREATEST(records.max_add, excluded.max_add),
         record_date = CASE
-          WHEN excluded.record_count > records.record_count THEN excluded.record_date
+          WHEN excluded.max_add > records.max_add THEN excluded.record_date
           ELSE records.record_date
         END,
         updated_at = excluded.updated_at
@@ -135,7 +135,7 @@ async function getRecordsByChat(chatId) {
     `
       SELECT
         r.user_id,
-        r.record_count,
+        r.max_add,
         r.record_date,
         u.username,
         u.first_name,
@@ -156,7 +156,7 @@ async function getChatRecord(chatId) {
     `
       SELECT
         r.user_id,
-        r.record_count,
+        r.max_add,
         r.record_date,
         u.username,
         u.first_name,
@@ -164,8 +164,8 @@ async function getChatRecord(chatId) {
       FROM records r
       LEFT JOIN users u ON u.user_id = r.user_id
       WHERE r.chat_id = $1
-        AND r.record_count = (
-          SELECT MAX(record_count) FROM records WHERE chat_id = $1
+        AND r.max_add = (
+          SELECT MAX(max_add) FROM records WHERE chat_id = $1
         )
       ORDER BY r.user_id ASC
     `,
