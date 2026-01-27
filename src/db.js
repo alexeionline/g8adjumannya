@@ -34,6 +34,7 @@ async function initDb() {
       chat_id BIGINT NOT NULL,
       user_id BIGINT NOT NULL,
       max_add INTEGER NOT NULL DEFAULT 0,
+      record_count INTEGER NOT NULL DEFAULT 0,
       record_date DATE NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       PRIMARY KEY (chat_id, user_id),
@@ -44,12 +45,22 @@ async function initDb() {
   await pool.query(`
     DO $$
     BEGIN
-      IF EXISTS (
+      IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'records' AND column_name = 'max_add'
+      ) THEN
+        ALTER TABLE records ADD COLUMN max_add INTEGER NOT NULL DEFAULT 0;
+        UPDATE records SET max_add = record_count;
+      END IF;
+
+      IF NOT EXISTS (
         SELECT 1
         FROM information_schema.columns
         WHERE table_name = 'records' AND column_name = 'record_count'
       ) THEN
-        ALTER TABLE records RENAME COLUMN record_count TO max_add;
+        ALTER TABLE records ADD COLUMN record_count INTEGER NOT NULL DEFAULT 0;
+        UPDATE records SET record_count = max_add;
       END IF;
     END $$;
   `);
@@ -96,10 +107,11 @@ async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
   await pool.query(
     `
-      INSERT INTO records (chat_id, user_id, max_add, record_date, updated_at)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO records (chat_id, user_id, max_add, record_count, record_date, updated_at)
+      VALUES ($1, $2, $3, $3, $4, $5)
       ON CONFLICT(chat_id, user_id) DO UPDATE SET
         max_add = GREATEST(records.max_add, excluded.max_add),
+        record_count = GREATEST(records.record_count, excluded.record_count),
         record_date = CASE
           WHEN excluded.max_add > records.max_add THEN excluded.record_date
           ELSE records.record_date

@@ -103,6 +103,15 @@ function parseStatusDate(text) {
   return { date: parsed.format('YYYY-MM-DD'), label: match[1] };
 }
 
+function parseRecord(text) {
+  if (!text) {
+    return false;
+  }
+
+  const normalized = stripLeadingMention(text);
+  return /\/?record(?:@\w+)?\s*$/i.test(normalized);
+}
+
 bot.start((ctx) => {
   ctx.reply(
     [
@@ -260,6 +269,10 @@ bot.on('text', async (ctx) => {
     ctx.session.waitingForAdd = false;
     delete ctx.session.waitingForAddUntil;
     return handleAdd(ctx, value);
+  }
+
+  if (parseRecord(text)) {
+    return handleRecord(ctx);
   }
 
   const value = parseAdd(text);
