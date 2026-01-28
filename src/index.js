@@ -239,8 +239,8 @@ async function handleStatus(ctx, parsed) {
   const lines = rows.map((row, index) => {
     const name = formatDisplayName(row);
     const progressBar = formatProgressBar(row.count);
-    const indexText = `${index + 1}.`;
-    return `${indexText} ${progressBar} ${row.count} ${name}`;
+    const indexEmoji = formatIndexEmoji(index);
+    return `${indexEmoji} ${progressBar} ${row.count} ${name}`;
   });
 
   const message = [header, ...lines].join('\n');
