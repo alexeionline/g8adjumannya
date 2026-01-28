@@ -60,6 +60,14 @@ function formatProgressBar(count) {
   return `${'🟩'.repeat(completedBlocks)}${'🟨'.repeat(remainingBlocks)}`;
 }
 
+function escapeHtml(text) {
+  return text.replace(/[&<>]/g, (ch) => {
+    if (ch === '&') return '&amp;';
+    if (ch === '<') return '&lt;';
+    return '&gt;';
+  });
+}
+
 function stripLeadingMention(text) {
   if (!text) {
     return text;
@@ -209,7 +217,8 @@ async function handleStatus(ctx, parsed) {
     return `${indexEmoji} ${namePadded} ${progressBar} ${row.count}`;
   });
 
-  return ctx.reply([header, separator, ...lines].join('\n'));
+  const message = [header, separator, ...lines].join('\n\n');
+  return ctx.reply(`<pre>${escapeHtml(message)}</pre>`, { parse_mode: 'HTML' });
 }
 
 bot.command('add', async (ctx) => {
