@@ -209,7 +209,6 @@ async function handleRecord(ctx) {
   const lines = records.map((row, index) => {
     const name = formatDisplayName(row);
     const date = dayjs(row.record_date).format('DD.MM.YYYY');
-    const namePadded = name.padEnd(18, ' ');
     const medalOrIndex =
       index === 0
         ? '🥇'
@@ -218,11 +217,11 @@ async function handleRecord(ctx) {
           : index === 2
             ? '🥉'
             : formatIndexEmoji(index);
-    return `${medalOrIndex} ${namePadded} ${row.max_add} (${date})`;
+    return `${medalOrIndex} [${row.max_add}] ${name} (${date})`;
   });
 
-  const message = ['Рекорды чата', `Общий рекорд: ${chatTop}`, '', ...lines].join('\n\n');
-  return ctx.reply(`<pre>${escapeHtml(message)}</pre>`, { parse_mode: 'HTML' });
+  const message = ['Рекорды чата', `Общий рекорд: ${chatTop}`, '', ...lines].join('\n');
+  return ctx.reply(message);
 }
 
 async function handleStatus(ctx, parsed) {
