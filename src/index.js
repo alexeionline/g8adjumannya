@@ -36,7 +36,7 @@ bot.telegram
 
 function formatDisplayName(row) {
   if (row.username) {
-    return `@${row.username}`;
+    return row.username;
   }
 
   const parts = [row.first_name, row.last_name].filter(Boolean);
@@ -184,7 +184,7 @@ async function handleAdd(ctx, value) {
     date: today,
   });
 
-  const name = ctx.from && ctx.from.username ? `@${ctx.from.username}` : formatDisplayName(ctx.from);
+  const name = ctx.from && ctx.from.username ? ctx.from.username : formatDisplayName(ctx.from);
   const header = formatAddHeader(name);
   const message = `${header} +${value} / Всего: ${total}`;
 
