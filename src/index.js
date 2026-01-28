@@ -186,8 +186,7 @@ async function handleAdd(ctx, value) {
 
   const name = ctx.from && ctx.from.username ? `@${ctx.from.username}` : formatDisplayName(ctx.from);
   const header = formatAddHeader(name);
-  const progressBar = formatProgressBar(total);
-  const message = `${header} +${value} ${progressBar} ${total}`;
+  const message = `${header} +${value} / Всего: ${total}`;
 
   return ctx.reply(message);
 }
