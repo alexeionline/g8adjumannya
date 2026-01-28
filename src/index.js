@@ -71,10 +71,10 @@ function formatIndexEmoji(index) {
 }
 
 function formatProgressBar(count) {
-  const totalBlocks = 10;
-  const completedBlocks = Math.min(totalBlocks, Math.floor(count / 10));
+  const totalBlocks = 5;
+  const completedBlocks = Math.min(totalBlocks, Math.floor(count / 20));
   const remainingBlocks = totalBlocks - completedBlocks;
-  return `${'🟩'.repeat(completedBlocks)}${'🟨'.repeat(remainingBlocks)}`;
+  return `${'🟢'.repeat(completedBlocks)}${'⚪'.repeat(remainingBlocks)}`;
 }
 
 function formatAddHeader(name) {
@@ -237,17 +237,15 @@ async function handleStatus(ctx, parsed) {
 
   const isToday = parsed.date === dayjs().format('YYYY-MM-DD');
   const header = isToday ? 'Текущий статус' : `Статус на ${parsed.label}`;
-  const separator = '_________________';
   const lines = rows.map((row, index) => {
     const name = formatDisplayName(row);
-    const namePadded = name.padEnd(18, ' ');
     const progressBar = formatProgressBar(row.count);
-    const indexEmoji = formatIndexEmoji(index);
-    return `${indexEmoji} ${namePadded} ${progressBar} ${row.count}`;
+    const indexText = `${index + 1}.`;
+    return `${indexText} ${progressBar} ${row.count} ${name}`;
   });
 
-  const message = [header, separator, ...lines].join('\n\n');
-  return ctx.reply(`<pre>${escapeHtml(message)}</pre>`, { parse_mode: 'HTML' });
+  const message = [header, ...lines].join('\n');
+  return ctx.reply(message);
 }
 
 bot.command('add', async (ctx) => {
