@@ -203,7 +203,7 @@ async function handleRecord(ctx) {
   const chatRecord = await getChatRecord(ctx.chat.id);
   const chatTop =
     chatRecord.length > 0
-      ? `${chatRecord[0].max_add} отжиманий — ${chatRecord
+      ? `🏆 ${chatRecord[0].max_add} отжиманий — ${chatRecord
           .map((row) => formatDisplayName(row))
           .join(', ')} (${dayjs(chatRecord[0].record_date).format('DD.MM.YYYY')})`
       : 'Рекорд чата пока не установлен.';
@@ -211,10 +211,20 @@ async function handleRecord(ctx) {
   const lines = records.map((row, index) => {
     const name = formatDisplayName(row);
     const date = dayjs(row.record_date).format('DD.MM.YYYY');
-    return `${index + 1}. ${name} — ${row.max_add} (${date})`;
+    const namePadded = name.padEnd(18, ' ');
+    const medalOrIndex =
+      index === 0
+        ? '🥇'
+        : index === 1
+          ? '🥈'
+          : index === 2
+            ? '🥉'
+            : formatIndexEmoji(index);
+    return `${medalOrIndex} ${namePadded} ${row.max_add} (${date})`;
   });
 
-  return ctx.reply(['Рекорды чата', `Общий рекорд: ${chatTop}`, '', ...lines].join('\n'));
+  const message = ['Рекорды чата', `Общий рекорд: ${chatTop}`, '', ...lines].join('\n\n');
+  return ctx.reply(`<pre>${escapeHtml(message)}</pre>`, { parse_mode: 'HTML' });
 }
 
 async function handleStatus(ctx, parsed) {
