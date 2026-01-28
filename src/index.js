@@ -187,11 +187,9 @@ async function handleAdd(ctx, value) {
   const name = ctx.from && ctx.from.username ? `@${ctx.from.username}` : formatDisplayName(ctx.from);
   const header = formatAddHeader(name);
   const progressBar = formatProgressBar(total);
-  const line1 = `Добавил ${value}.`;
-  const line2 = `Твой текущий результат ${progressBar} ${total}`;
-  const message = [header, line1, line2].join('\n\n');
+  const message = `${header} Добавил ${value}. ${progressBar} ${total}`;
 
-  return ctx.reply(`<pre>${escapeHtml(message)}</pre>`, { parse_mode: 'HTML' });
+  return ctx.reply(message);
 }
 
 async function handleRecord(ctx) {
