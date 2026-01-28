@@ -219,7 +219,7 @@ async function handleRecord(ctx) {
     return `${medalOrIndex} [${row.max_add}] ${name} (${date})`;
   });
 
-  const message = ['Рекорды чата', `Общий рекорд: ${chatTop}`, '', ...lines].join('\n');
+  const message = lines.join('\n');
   return ctx.reply(message);
 }
 
