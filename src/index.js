@@ -54,6 +54,16 @@ const ADD_PHRASES = [
   'Еба ты лютый, username!',
   'Все это видят?',
   'Дядя, тебя не остановить!',
+  'Красавчик, username!',
+  'Жёстко идёшь, username!',
+  'Уровень зверя, username!',
+  'Это мощь, username!',
+  'Так держать, username!',
+  'Стальной режим, username!',
+  'Пушка, username!',
+  'Энергия топ, username!',
+  'Вот это темп, username!',
+  'Продолжай в том же духе, username!',
 ];
 
 function formatIndexEmoji(index) {
