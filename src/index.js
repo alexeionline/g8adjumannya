@@ -234,7 +234,7 @@ async function handleStatus(ctx, parsed) {
   }
 
   const isToday = parsed.date === dayjs().format('YYYY-MM-DD');
-  const header = isToday ? 'Текущий статус' : `Статус на ${parsed.label}`;
+  const header = isToday ? null : `Статус на ${parsed.label}`;
   const lines = rows.map((row, index) => {
     const name = formatDisplayName(row);
     const progressBar = formatProgressBar(row.count);
@@ -242,7 +242,7 @@ async function handleStatus(ctx, parsed) {
     return `${indexEmoji} ${progressBar} ${row.count} ${name}`;
   });
 
-  const message = [header, ...lines].join('\n');
+  const message = (header ? [header] : []).concat(lines).join('\n');
   return ctx.reply(message);
 }
 
