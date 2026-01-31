@@ -14,6 +14,21 @@ const ADD_PHRASES = [
   'Энергия топ, username!',
   'Вот это темп, username!',
   'Продолжай в том же духе, username!',
+  'Ты зверь, username!',
+  'Разносишь, username!',
+  'Мясорубка включена, username!',
+  'Кач на максималках, username!',
+  'Жёстко бахнул, username!',
+  'Это уже не шутки, username!',
+  'Сила на месте, username!',
+  'Злой режим активирован, username!',
+  'Прёт как танк, username!',
+  'Еб*ть ты заряжен, username!',
+  'Адреналин в крови, username!',
+  'Кровь, пот и результат, username!',
+  'Железный характер, username!',
+  'Грязная работа — чистый результат, username!',
+  'Разогнался — не тормози, username!',
 ];
 
 const COMMANDS_TEXT = [
