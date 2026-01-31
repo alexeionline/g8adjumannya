@@ -90,6 +90,19 @@ function escapeHtml(text) {
   });
 }
 
+async function sendEphemeral(ctx, text, extra) {
+  const message = await ctx.reply(text, extra);
+  if (!message || !message.chat || !message.message_id) {
+    return message;
+  }
+
+  setTimeout(() => {
+    bot.telegram.deleteMessage(message.chat.id, message.message_id).catch(() => {});
+  }, 10_000);
+
+  return message;
+}
+
 function stripLeadingMention(text) {
   if (!text) {
     return text;
@@ -156,7 +169,8 @@ function parseRecord(text) {
 }
 
 bot.start((ctx) => {
-  ctx.reply(
+  sendEphemeral(
+    ctx,
     [
       'Привет! Я бот для челленджа 100 отжиманий.',
       'Команды:',
@@ -188,13 +202,13 @@ async function handleAdd(ctx, value) {
   const header = formatAddHeader(name);
   const message = `${header} +${value} / Всего: ${total}`;
 
-  return ctx.reply(message);
+  return sendEphemeral(ctx, message);
 }
 
 async function handleRecord(ctx) {
   const records = await getRecordsByChat(ctx.chat.id);
   if (!records.length) {
-    return ctx.reply('Рекордов пока нет.');
+    return sendEphemeral(ctx, 'Рекордов пока нет.');
   }
 
   const chatRecord = await getChatRecord(ctx.chat.id);
@@ -220,17 +234,17 @@ async function handleRecord(ctx) {
   });
 
   const message = lines.join('\n');
-  return ctx.reply(message);
+  return sendEphemeral(ctx, message);
 }
 
 async function handleStatus(ctx, parsed) {
   if (parsed.error) {
-    return ctx.reply(parsed.error);
+    return sendEphemeral(ctx, parsed.error);
   }
 
   const rows = await getStatusByDate(ctx.chat.id, parsed.date);
   if (!rows.length) {
-    return ctx.reply(`Результатов за ${parsed.label} нет.`);
+    return sendEphemeral(ctx, `Результатов за ${parsed.label} нет.`);
   }
 
   const isToday = parsed.date === dayjs().format('YYYY-MM-DD');
@@ -243,7 +257,7 @@ async function handleStatus(ctx, parsed) {
   });
 
   const message = (header ? [header] : []).concat(lines).join('\n');
-  return ctx.reply(message);
+  return sendEphemeral(ctx, message);
 }
 
 bot.command('add', async (ctx) => {
@@ -252,7 +266,7 @@ bot.command('add', async (ctx) => {
     return handleAdd(ctx, value);
   }
 
-  await ctx.reply('Сколько отжиманий добавить?', {
+  await sendEphemeral(ctx, 'Сколько отжиманий добавить?', {
     reply_markup: { force_reply: true, selective: true },
   });
   ctx.session = {
@@ -264,19 +278,19 @@ bot.command('add', async (ctx) => {
 
 bot.command('cancel', async (ctx) => {
   if (!ctx.session || !ctx.session.waitingForAdd) {
-    return ctx.reply('Сейчас нет активного ожидания.');
+    return sendEphemeral(ctx, 'Сейчас нет активного ожидания.');
   }
 
   ctx.session.waitingForAdd = false;
   delete ctx.session.waitingForAddUntil;
 
-  return ctx.reply('Ожидание отменено.');
+  return sendEphemeral(ctx, 'Ожидание отменено.');
 });
 
 bot.command('status', async (ctx) => {
   const parsed = parseStatusDate(ctx.message && ctx.message.text);
   if (!parsed) {
-    return ctx.reply('Формат: status или status DD.MM.YYYY.');
+    return sendEphemeral(ctx, 'Формат: status или status DD.MM.YYYY.');
   }
 
   return handleStatus(ctx, parsed);
@@ -306,16 +320,16 @@ bot.on('text', async (ctx) => {
       ctx.session.waitingForAdd = false;
       delete ctx.session.waitingForAddUntil;
 
-      return ctx.reply('Время ожидания истекло. Введи /add, чтобы начать заново.');
+      return sendEphemeral(ctx, 'Время ожидания истекло. Введи /add, чтобы начать заново.');
     }
 
     const value = Number.parseInt(text, 10);
     if (!Number.isFinite(value)) {
-      return ctx.reply('Введи число.');
+      return sendEphemeral(ctx, 'Введи число.');
     }
 
     if (value < 0) {
-      return ctx.reply('Число должно быть нулевым или положительным.');
+      return sendEphemeral(ctx, 'Число должно быть нулевым или положительным.');
     }
 
     ctx.session.waitingForAdd = false;
