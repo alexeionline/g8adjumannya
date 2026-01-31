@@ -6,6 +6,7 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 const { addCount, getRecordsByChat, getStatusByDate, initDb, updateRecord, upsertUser } = require('./db');
 const { createAddHandler } = require('./handlers/add');
 const { createRecordHandler } = require('./handlers/record');
+const { createForceHandler } = require('./handlers/force');
 const { createStatusHandler } = require('./handlers/status');
 const { createDeletionHelpers } = require('./utils/deletionQueue');
 const {
@@ -15,7 +16,7 @@ const {
   formatProgressBar,
 } = require('./utils/format');
 const { createParsers } = require('./utils/parse');
-const { COMMANDS_TEXT, ERRORS } = require('./constants/text');
+const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES } = require('./constants/text');
 
 dayjs.extend(customParseFormat);
 
@@ -31,6 +32,7 @@ bot.use(session());
 bot.telegram
   .setMyCommands([
     { command: 'add', description: 'Добавить отжимания за сегодня' },
+    { command: 'force', description: 'Замотивировать участника' },
     { command: 'record', description: 'Показать рекорды чата' },
     { command: 'status', description: 'Показать статус за дату' },
   ])
@@ -65,6 +67,11 @@ const handleStatus = createStatusHandler({
   formatIndexEmoji,
   sendEphemeral,
   errors: ERRORS,
+});
+const handleForce = createForceHandler({
+  forceMessages: FORCE_MESSAGES,
+  errors: ERRORS,
+  sendEphemeral,
 });
 
 bot.start((ctx) => {
@@ -118,6 +125,10 @@ bot.command('status', async (ctx) => {
 
 bot.command('record', async (ctx) => {
   return handleRecord(ctx);
+});
+
+bot.command('force', async (ctx) => {
+  return handleForce(ctx);
 });
 
 bot.on('text', async (ctx) => {

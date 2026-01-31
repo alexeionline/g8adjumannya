@@ -44,13 +44,13 @@ function createDeletionHelpers(bot, delayMs = 30_000) {
     scheduleDeletionTimer();
   }
 
-  function sendEphemeral(ctx, text, extra) {
+  function sendEphemeral(ctx, text, extra, overrideDelayMs) {
     return ctx.reply(text, extra).then((message) => {
       if (!message || !message.chat || !message.message_id) {
         return message;
       }
 
-      enqueueDeletion(message.chat.id, message.message_id);
+      enqueueDeletion(message.chat.id, message.message_id, overrideDelayMs);
       return message;
     });
   }
