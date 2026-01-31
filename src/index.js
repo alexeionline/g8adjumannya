@@ -98,7 +98,7 @@ async function sendEphemeral(ctx, text, extra) {
 
   setTimeout(() => {
     bot.telegram.deleteMessage(message.chat.id, message.message_id).catch(() => {});
-  }, 10_000);
+  }, 30_000);
 
   return message;
 }
@@ -110,7 +110,7 @@ function scheduleDeleteMessage(ctx) {
 
   setTimeout(() => {
     bot.telegram.deleteMessage(ctx.chat.id, ctx.message.message_id).catch(() => {});
-  }, 10_000);
+  }, 30_000);
 }
 
 function stripLeadingMention(text) {
