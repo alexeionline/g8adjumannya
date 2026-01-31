@@ -96,11 +96,53 @@ async function sendEphemeral(ctx, text, extra) {
     return message;
   }
 
-  setTimeout(() => {
-    bot.telegram.deleteMessage(message.chat.id, message.message_id).catch(() => {});
-  }, 30_000);
+  enqueueDeletion(message.chat.id, message.message_id, 30_000);
 
   return message;
+}
+
+const deletionQueue = [];
+const deletionIndex = new Map();
+let deletionTimer = null;
+
+function enqueueDeletion(chatId, messageId, delayMs) {
+  const deleteAt = Date.now() + delayMs;
+  const key = `${chatId}:${messageId}`;
+  if (deletionIndex.has(key)) {
+    return;
+  }
+
+  const entry = { chatId, messageId, deleteAt };
+  deletionQueue.push(entry);
+  deletionIndex.set(key, entry);
+  deletionQueue.sort((a, b) => a.deleteAt - b.deleteAt);
+  scheduleDeletionTimer();
+}
+
+function scheduleDeletionTimer() {
+  if (deletionTimer) {
+    clearTimeout(deletionTimer);
+  }
+
+  if (!deletionQueue.length) {
+    deletionTimer = null;
+    return;
+  }
+
+  const delay = Math.max(0, deletionQueue[0].deleteAt - Date.now());
+  deletionTimer = setTimeout(processDeletionQueue, delay);
+}
+
+function processDeletionQueue() {
+  const now = Date.now();
+  while (deletionQueue.length && deletionQueue[0].deleteAt <= now) {
+    const entry = deletionQueue.shift();
+    const key = `${entry.chatId}:${entry.messageId}`;
+    deletionIndex.delete(key);
+    bot.telegram.deleteMessage(entry.chatId, entry.messageId).catch(() => {});
+  }
+
+  scheduleDeletionTimer();
 }
 
 function scheduleDeleteMessage(ctx) {
@@ -108,9 +150,7 @@ function scheduleDeleteMessage(ctx) {
     return;
   }
 
-  setTimeout(() => {
-    bot.telegram.deleteMessage(ctx.chat.id, ctx.message.message_id).catch(() => {});
-  }, 30_000);
+  enqueueDeletion(ctx.chat.id, ctx.message.message_id, 30_000);
 }
 
 function stripLeadingMention(text) {
