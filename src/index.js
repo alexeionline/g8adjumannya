@@ -3,15 +3,18 @@ require('dotenv').config();
 const { Telegraf, session } = require('telegraf');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
+const { addCount, getRecordsByChat, getStatusByDate, initDb, updateRecord, upsertUser } = require('./db');
+const { createAddHandler } = require('./handlers/add');
+const { createRecordHandler } = require('./handlers/record');
+const { createStatusHandler } = require('./handlers/status');
+const { createDeletionHelpers } = require('./utils/deletionQueue');
 const {
-  addCount,
-  getChatRecord,
-  getRecordsByChat,
-  getStatusByDate,
-  initDb,
-  updateRecord,
-  upsertUser,
-} = require('./db');
+  formatAddHeader,
+  formatDisplayName,
+  formatIndexEmoji,
+  formatProgressBar,
+} = require('./utils/format');
+const { createParsers } = require('./utils/parse');
 
 dayjs.extend(customParseFormat);
 
@@ -34,189 +37,32 @@ bot.telegram
     console.error('Failed to set bot commands:', error);
   });
 
-function formatDisplayName(row) {
-  if (row.username) {
-    return row.username;
-  }
-
-  const parts = [row.first_name, row.last_name].filter(Boolean);
-  if (parts.length) {
-    return parts.join(' ');
-  }
-
-  return `User ${row.user_id}`;
-}
-
-const INDEX_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-const ADD_PHRASES = [
-  'Ты крут, username!',
-  'Ты машина, username!',
-  'Еба ты лютый, username!',
-  'Все это видят?',
-  'Дядя, тебя не остановить!',
-  'Красавчик, username!',
-  'Жёстко идёшь, username!',
-  'Уровень зверя, username!',
-  'Это мощь, username!',
-  'Так держать, username!',
-  'Стальной режим, username!',
-  'Пушка, username!',
-  'Энергия топ, username!',
-  'Вот это темп, username!',
-  'Продолжай в том же духе, username!',
-];
-
-function formatIndexEmoji(index) {
-  return INDEX_EMOJIS[index] || `${index + 1}.`;
-}
-
-function formatProgressBar(count) {
-  const totalBlocks = 5;
-  const completedBlocks = Math.min(totalBlocks, Math.floor(count / 20));
-  const remainingBlocks = totalBlocks - completedBlocks;
-  return `${'🟢'.repeat(completedBlocks)}${'⚪'.repeat(remainingBlocks)}`;
-}
-
-function formatAddHeader(name) {
-  const phrase = ADD_PHRASES[Math.floor(Math.random() * ADD_PHRASES.length)];
-  return phrase.replace('username', name);
-}
-
-function escapeHtml(text) {
-  return text.replace(/[&<>]/g, (ch) => {
-    if (ch === '&') return '&amp;';
-    if (ch === '<') return '&lt;';
-    return '&gt;';
-  });
-}
-
-async function sendEphemeral(ctx, text, extra) {
-  const message = await ctx.reply(text, extra);
-  if (!message || !message.chat || !message.message_id) {
-    return message;
-  }
-
-  enqueueDeletion(message.chat.id, message.message_id, 30_000);
-
-  return message;
-}
-
-const deletionQueue = [];
-const deletionIndex = new Map();
-let deletionTimer = null;
-
-function enqueueDeletion(chatId, messageId, delayMs) {
-  const deleteAt = Date.now() + delayMs;
-  const key = `${chatId}:${messageId}`;
-  if (deletionIndex.has(key)) {
-    return;
-  }
-
-  const entry = { chatId, messageId, deleteAt };
-  deletionQueue.push(entry);
-  deletionIndex.set(key, entry);
-  deletionQueue.sort((a, b) => a.deleteAt - b.deleteAt);
-  scheduleDeletionTimer();
-}
-
-function scheduleDeletionTimer() {
-  if (deletionTimer) {
-    clearTimeout(deletionTimer);
-  }
-
-  if (!deletionQueue.length) {
-    deletionTimer = null;
-    return;
-  }
-
-  const delay = Math.max(0, deletionQueue[0].deleteAt - Date.now());
-  deletionTimer = setTimeout(processDeletionQueue, delay);
-}
-
-function processDeletionQueue() {
-  const now = Date.now();
-  while (deletionQueue.length && deletionQueue[0].deleteAt <= now) {
-    const entry = deletionQueue.shift();
-    const key = `${entry.chatId}:${entry.messageId}`;
-    deletionIndex.delete(key);
-    bot.telegram.deleteMessage(entry.chatId, entry.messageId).catch(() => {});
-  }
-
-  scheduleDeletionTimer();
-}
-
-function scheduleDeleteMessage(ctx) {
-  if (!ctx || !ctx.chat || !ctx.message || !ctx.message.message_id) {
-    return;
-  }
-
-  enqueueDeletion(ctx.chat.id, ctx.message.message_id, 30_000);
-}
-
-function stripLeadingMention(text) {
-  if (!text) {
-    return text;
-  }
-
-  const trimmed = text.trim();
-  const match = trimmed.match(/^@\w+\s+/);
-  if (!match) {
-    return trimmed;
-  }
-
-  return trimmed.slice(match[0].length);
-}
-
-function parseAdd(text) {
-  if (!text) {
-    return null;
-  }
-
-  const normalized = stripLeadingMention(text);
-  const match = normalized.match(/\/?add(?:@\w+)?\s+(\d+)/i);
-  if (!match) {
-    return null;
-  }
-
-  const value = Number.parseInt(match[1], 10);
-  if (!Number.isFinite(value) || value < 0) {
-    return null;
-  }
-
-  return value;
-}
-
-function parseStatusDate(text) {
-  if (!text) {
-    return null;
-  }
-
-  const normalized = stripLeadingMention(text);
-  const match = normalized.match(/\/?status(?:@\w+)?(?:\s+(\d{2}\.\d{2}\.\d{4}))?/i);
-  if (!match) {
-    return null;
-  }
-
-  if (!match[1]) {
-    return { date: dayjs().format('YYYY-MM-DD'), label: dayjs().format('DD.MM.YYYY') };
-  }
-
-  const parsed = dayjs(match[1], 'DD.MM.YYYY', true);
-  if (!parsed.isValid()) {
-    return { error: 'Неверный формат даты. Пример: status 24.01.2026' };
-  }
-
-  return { date: parsed.format('YYYY-MM-DD'), label: match[1] };
-}
-
-function parseRecord(text) {
-  if (!text) {
-    return false;
-  }
-
-  const normalized = stripLeadingMention(text);
-  return /\/?record(?:@\w+)?\s*$/i.test(normalized);
-}
+const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
+const { parseAdd, parseRecord, parseStatusDate } = createParsers(dayjs);
+const handleAdd = createAddHandler({
+  dayjs,
+  upsertUser,
+  addCount,
+  updateRecord,
+  formatDisplayName,
+  formatAddHeader,
+  sendEphemeral,
+});
+const handleRecord = createRecordHandler({
+  dayjs,
+  getRecordsByChat,
+  formatDisplayName,
+  formatIndexEmoji,
+  sendEphemeral,
+});
+const handleStatus = createStatusHandler({
+  dayjs,
+  getStatusByDate,
+  formatDisplayName,
+  formatProgressBar,
+  formatIndexEmoji,
+  sendEphemeral,
+});
 
 bot.start((ctx) => {
   sendEphemeral(
@@ -239,85 +85,6 @@ bot.use((ctx, next) => {
 
   return next();
 });
-
-async function handleAdd(ctx, value) {
-  await upsertUser(ctx.from);
-
-  const today = dayjs().format('YYYY-MM-DD');
-  const total = await addCount({
-    chatId: ctx.chat.id,
-    userId: ctx.from.id,
-    date: today,
-    delta: value,
-  });
-  await updateRecord({
-    chatId: ctx.chat.id,
-    userId: ctx.from.id,
-    count: value,
-    date: today,
-  });
-
-  const name = ctx.from && ctx.from.username ? ctx.from.username : formatDisplayName(ctx.from);
-  const header = formatAddHeader(name);
-  const message = `${header} +${value} / Всего: ${total}`;
-
-  return sendEphemeral(ctx, message);
-}
-
-async function handleRecord(ctx) {
-  const records = await getRecordsByChat(ctx.chat.id);
-  if (!records.length) {
-    return sendEphemeral(ctx, 'Рекордов пока нет.');
-  }
-
-  const chatRecord = await getChatRecord(ctx.chat.id);
-  const chatTop =
-    chatRecord.length > 0
-      ? `🏆 ${chatRecord[0].max_add} отжиманий — ${chatRecord
-          .map((row) => formatDisplayName(row))
-          .join(', ')} (${dayjs(chatRecord[0].record_date).format('DD.MM.YYYY')})`
-      : 'Рекорд чата пока не установлен.';
-
-  const lines = records.map((row, index) => {
-    const name = formatDisplayName(row);
-    const date = dayjs(row.record_date).format('DD.MM.YYYY');
-    const medalOrIndex =
-      index === 0
-        ? '🥇'
-        : index === 1
-          ? '🥈'
-          : index === 2
-            ? '🥉'
-            : formatIndexEmoji(index);
-    return `${medalOrIndex} [${row.max_add}] ${name} (${date})`;
-  });
-
-  const message = lines.join('\n');
-  return sendEphemeral(ctx, message);
-}
-
-async function handleStatus(ctx, parsed) {
-  if (parsed.error) {
-    return sendEphemeral(ctx, parsed.error);
-  }
-
-  const rows = await getStatusByDate(ctx.chat.id, parsed.date);
-  if (!rows.length) {
-    return sendEphemeral(ctx, `Результатов за ${parsed.label} нет.`);
-  }
-
-  const isToday = parsed.date === dayjs().format('YYYY-MM-DD');
-  const header = isToday ? null : `Статус на ${parsed.label}`;
-  const lines = rows.map((row, index) => {
-    const name = formatDisplayName(row);
-    const progressBar = formatProgressBar(row.count);
-    const indexEmoji = formatIndexEmoji(index);
-    return `${indexEmoji} ${progressBar} ${row.count} ${name}`;
-  });
-
-  const message = (header ? [header] : []).concat(lines).join('\n');
-  return sendEphemeral(ctx, message);
-}
 
 bot.command('add', async (ctx) => {
   const value = parseAdd(ctx.message && ctx.message.text);
