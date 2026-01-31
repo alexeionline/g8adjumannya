@@ -103,6 +103,16 @@ async function sendEphemeral(ctx, text, extra) {
   return message;
 }
 
+function scheduleDeleteMessage(ctx) {
+  if (!ctx || !ctx.chat || !ctx.message || !ctx.message.message_id) {
+    return;
+  }
+
+  setTimeout(() => {
+    bot.telegram.deleteMessage(ctx.chat.id, ctx.message.message_id).catch(() => {});
+  }, 10_000);
+}
+
 function stripLeadingMention(text) {
   if (!text) {
     return text;
@@ -179,6 +189,15 @@ bot.start((ctx) => {
       'status DD.MM.YYYY — статус за дату',
     ].join('\n')
   );
+});
+
+bot.use((ctx, next) => {
+  const text = ctx.message && ctx.message.text;
+  if (text && text.trim().startsWith('/')) {
+    scheduleDeleteMessage(ctx);
+  }
+
+  return next();
 });
 
 async function handleAdd(ctx, value) {
