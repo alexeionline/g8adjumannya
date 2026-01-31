@@ -1,4 +1,8 @@
-function createParsers(dayjs) {
+function createParsers(dayjs, errors) {
+  if (!errors) {
+    throw new Error('errors are required');
+  }
+
   function stripLeadingMention(text) {
     if (!text) {
       return text;
@@ -49,7 +53,7 @@ function createParsers(dayjs) {
 
     const parsed = dayjs(match[1], 'DD.MM.YYYY', true);
     if (!parsed.isValid()) {
-      return { error: 'Неверный формат даты. Пример: status 24.01.2026' };
+      return { error: errors.INVALID_DATE };
     }
 
     return { date: parsed.format('YYYY-MM-DD'), label: match[1] };

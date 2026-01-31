@@ -15,6 +15,7 @@ const {
   formatProgressBar,
 } = require('./utils/format');
 const { createParsers } = require('./utils/parse');
+const { COMMANDS_TEXT, ERRORS } = require('./constants/text');
 
 dayjs.extend(customParseFormat);
 
@@ -38,7 +39,7 @@ bot.telegram
   });
 
 const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
-const { parseAdd, parseRecord, parseStatusDate } = createParsers(dayjs);
+const { parseAdd, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
 const handleAdd = createAddHandler({
   dayjs,
   upsertUser,
@@ -54,6 +55,7 @@ const handleRecord = createRecordHandler({
   formatDisplayName,
   formatIndexEmoji,
   sendEphemeral,
+  errors: ERRORS,
 });
 const handleStatus = createStatusHandler({
   dayjs,
@@ -62,19 +64,11 @@ const handleStatus = createStatusHandler({
   formatProgressBar,
   formatIndexEmoji,
   sendEphemeral,
+  errors: ERRORS,
 });
 
 bot.start((ctx) => {
-  sendEphemeral(
-    ctx,
-    [
-      'Привет! Я бот для челленджа 100 отжиманий.',
-      'Команды:',
-      'add X — добавить отжимания за сегодня',
-      'status — статус за сегодня',
-      'status DD.MM.YYYY — статус за дату',
-    ].join('\n')
-  );
+  sendEphemeral(ctx, COMMANDS_TEXT);
 });
 
 bot.use((ctx, next) => {
@@ -104,19 +98,19 @@ bot.command('add', async (ctx) => {
 
 bot.command('cancel', async (ctx) => {
   if (!ctx.session || !ctx.session.waitingForAdd) {
-    return sendEphemeral(ctx, 'Сейчас нет активного ожидания.');
+    return sendEphemeral(ctx, ERRORS.WAITING_NONE);
   }
 
   ctx.session.waitingForAdd = false;
   delete ctx.session.waitingForAddUntil;
 
-  return sendEphemeral(ctx, 'Ожидание отменено.');
+  return sendEphemeral(ctx, ERRORS.WAITING_CANCELLED);
 });
 
 bot.command('status', async (ctx) => {
   const parsed = parseStatusDate(ctx.message && ctx.message.text);
   if (!parsed) {
-    return sendEphemeral(ctx, 'Формат: status или status DD.MM.YYYY.');
+    return sendEphemeral(ctx, ERRORS.STATUS_FORMAT);
   }
 
   return handleStatus(ctx, parsed);
@@ -146,16 +140,16 @@ bot.on('text', async (ctx) => {
       ctx.session.waitingForAdd = false;
       delete ctx.session.waitingForAddUntil;
 
-      return sendEphemeral(ctx, 'Время ожидания истекло. Введи /add, чтобы начать заново.');
+      return sendEphemeral(ctx, ERRORS.WAITING_EXPIRED);
     }
 
     const value = Number.parseInt(text, 10);
     if (!Number.isFinite(value)) {
-      return sendEphemeral(ctx, 'Введи число.');
+      return sendEphemeral(ctx, ERRORS.ENTER_NUMBER);
     }
 
     if (value < 0) {
-      return sendEphemeral(ctx, 'Число должно быть нулевым или положительным.');
+      return sendEphemeral(ctx, ERRORS.NON_NEGATIVE);
     }
 
     ctx.session.waitingForAdd = false;

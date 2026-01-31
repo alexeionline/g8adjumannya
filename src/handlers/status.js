@@ -1,4 +1,12 @@
-function createStatusHandler({ dayjs, getStatusByDate, formatDisplayName, formatProgressBar, formatIndexEmoji, sendEphemeral }) {
+function createStatusHandler({
+  dayjs,
+  getStatusByDate,
+  formatDisplayName,
+  formatProgressBar,
+  formatIndexEmoji,
+  sendEphemeral,
+  errors,
+}) {
   return async function handleStatus(ctx, parsed) {
     if (parsed.error) {
       return sendEphemeral(ctx, parsed.error);
@@ -6,7 +14,7 @@ function createStatusHandler({ dayjs, getStatusByDate, formatDisplayName, format
 
     const rows = await getStatusByDate(ctx.chat.id, parsed.date);
     if (!rows.length) {
-      return sendEphemeral(ctx, `Результатов за ${parsed.label} нет.`);
+      return sendEphemeral(ctx, errors.NO_RESULTS(parsed.label));
     }
 
     const isToday = parsed.date === dayjs().format('YYYY-MM-DD');

@@ -1,8 +1,15 @@
-function createRecordHandler({ dayjs, getRecordsByChat, formatDisplayName, formatIndexEmoji, sendEphemeral }) {
+function createRecordHandler({
+  dayjs,
+  getRecordsByChat,
+  formatDisplayName,
+  formatIndexEmoji,
+  sendEphemeral,
+  errors,
+}) {
   return async function handleRecord(ctx) {
     const records = await getRecordsByChat(ctx.chat.id);
     if (!records.length) {
-      return sendEphemeral(ctx, 'Рекордов пока нет.');
+      return sendEphemeral(ctx, errors.RECORDS_EMPTY);
     }
 
     const lines = records.map((row, index) => {
