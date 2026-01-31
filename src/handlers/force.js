@@ -10,7 +10,7 @@ function createForceHandler({ forceMessages, errors, sendEphemeral }) {
 
     const mention = `@${match[1]}`;
     const message = forceMessages[Math.floor(Math.random() * forceMessages.length)];
-    return sendEphemeral(ctx, `${mention} ${message}`, undefined, 60_000);
+    return sendEphemeral(ctx, `${mention} ${message}`, undefined, 180_000);
   };
 }
 
