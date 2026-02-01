@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const crypto = require('crypto');
 const { Telegraf, session } = require('telegraf');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
@@ -154,8 +155,20 @@ bot.command('web', async (ctx) => {
     return sendEphemeral(ctx, ERRORS.WEB_MISSING);
   }
 
+  let token = await getApiTokenByChat(ctx.chat.id);
+  if (!token) {
+    token = crypto.randomBytes(24).toString('hex');
+    await createApiToken(ctx.chat.id, token);
+  }
+
+  const webUrl = new URL(url);
+  webUrl.searchParams.set('token', token);
+  if (ctx.from && ctx.from.id) {
+    webUrl.searchParams.set('user_id', String(ctx.from.id));
+  }
+
   const isPrivate = ctx.chat && ctx.chat.type === 'private';
-  const button = { text: 'Open Web App', web_app: { url } };
+  const button = { text: 'Open Web App', web_app: { url: webUrl.toString() } };
 
   if (!isPrivate) {
     try {
@@ -164,7 +177,12 @@ bot.command('web', async (ctx) => {
           inline_keyboard: [[button]],
         },
       });
-      return sendEphemeral(ctx, 'Отправил кнопку в личку.');
+      const botUsername = ctx.botInfo && ctx.botInfo.username ? ctx.botInfo.username : '';
+      const dmLink = botUsername ? `https://t.me/${botUsername}` : '';
+      const text = dmLink
+        ? `Добавил кнопку в личку: ${dmLink}`
+        : 'Добавил кнопку в личку.';
+      return sendEphemeral(ctx, text);
     } catch (error) {
       return sendEphemeral(ctx, 'Не могу написать в личку. Открой диалог с ботом и отправь /start.');
     }

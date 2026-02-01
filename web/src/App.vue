@@ -16,6 +16,23 @@ const addCountInput = ref('')
 
 onMounted(async () => {
   auth.load()
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('token')
+  const userId = params.get('user_id')
+  const apiBase = params.get('api_base')
+  if (apiBase) {
+    auth.apiBase = apiBase
+  }
+  if (token) {
+    auth.token = token
+  }
+  if (userId) {
+    auth.defaultUserId = userId
+  }
+  if (token || userId || apiBase) {
+    auth.save()
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
   historyUserId.value = auth.defaultUserId || ''
   if (auth.isReady) {
     await data.loadAll(auth, historyUserId.value || auth.defaultUserId)
