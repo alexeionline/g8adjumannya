@@ -102,7 +102,8 @@ function createApiApp() {
 
   const rows = await getUserHistory(req.chatId, userId);
   const days = rows.reduce((acc, row) => {
-    acc[row.date] = row.count;
+    const key = dayjs(row.date).format('YYYY-MM-DD');
+    acc[key] = row.count;
     return acc;
   }, {});
 
