@@ -5,6 +5,7 @@ const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
   addCount,
+  getChatIdByToken,
   getRecordsByChat,
   getStatusByDate,
   getUserHistory,
@@ -17,60 +18,26 @@ dayjs.extend(customParseFormat);
 const app = express();
 app.use(express.json());
 
-function loadTokenMap() {
-  if (process.env.API_TOKENS_JSON) {
-    const parsed = JSON.parse(process.env.API_TOKENS_JSON);
-    const map = new Map();
-    Object.entries(parsed).forEach(([token, chats]) => {
-      map.set(token, Array.isArray(chats) ? chats.map(Number) : []);
-    });
-    return map;
-  }
-
-  if (process.env.API_TOKEN && process.env.API_CHAT_ID) {
-    return new Map([[process.env.API_TOKEN, [Number(process.env.API_CHAT_ID)]]]);
-  }
-
-  throw new Error('API auth config missing (API_TOKENS_JSON or API_TOKEN+API_CHAT_ID).');
-}
-
-const tokenMap = loadTokenMap();
-
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const header = req.headers.authorization || '';
   const match = header.match(/^Bearer\s+(.+)$/i);
   if (!match) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const token = match[1];
-  const allowedChats = tokenMap.get(token);
-  if (!allowedChats) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const token = match[1];
+    const chatId = await getChatIdByToken(token);
+    if (!chatId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    req.chatId = chatId;
+    return next();
+  } catch (error) {
+    console.error('Auth error:', error);
+    return res.status(500).json({ error: 'Auth error' });
   }
-
-  req.allowedChats = allowedChats;
-  return next();
-}
-
-function parseChatId(req) {
-  const raw = req.body.chat_id ?? req.query.chat_id;
-  const chatId = Number(raw);
-  return Number.isFinite(chatId) ? chatId : null;
-}
-
-function requireChatAccess(req, res, next) {
-  const chatId = parseChatId(req);
-  if (!chatId) {
-    return res.status(400).json({ error: 'chat_id is required' });
-  }
-
-  if (!req.allowedChats.includes(chatId)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-
-  req.chatId = chatId;
-  return next();
 }
 
 app.use(authMiddleware);
@@ -79,7 +46,7 @@ app.get('/health', (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/add', requireChatAccess, async (req, res) => {
+app.post('/add', async (req, res) => {
   const userId = Number(req.body.user_id);
   const delta = Number(req.body.delta);
   if (!Number.isFinite(userId) || !Number.isFinite(delta) || delta < 0) {
@@ -107,7 +74,7 @@ app.post('/add', requireChatAccess, async (req, res) => {
   res.json({ total });
 });
 
-app.get('/status', requireChatAccess, async (req, res) => {
+app.get('/status', async (req, res) => {
   const date = req.query.date
     ? dayjs(req.query.date, 'YYYY-MM-DD', true)
     : dayjs();
@@ -119,12 +86,12 @@ app.get('/status', requireChatAccess, async (req, res) => {
   res.json({ date: date.format('YYYY-MM-DD'), rows });
 });
 
-app.get('/records', requireChatAccess, async (req, res) => {
+app.get('/records', async (req, res) => {
   const rows = await getRecordsByChat(req.chatId);
   res.json({ rows });
 });
 
-app.get('/history', requireChatAccess, async (req, res) => {
+app.get('/history', async (req, res) => {
   const userId = Number(req.query.user_id);
   if (!Number.isFinite(userId)) {
     return res.status(400).json({ error: 'user_id is required' });

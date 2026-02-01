@@ -3,8 +3,18 @@ require('dotenv').config();
 const { Telegraf, session } = require('telegraf');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
-const { addCount, getRecordsByChat, getStatusByDate, initDb, updateRecord, upsertUser } = require('./db');
+const {
+  addCount,
+  createApiToken,
+  getApiTokenByChat,
+  getRecordsByChat,
+  getStatusByDate,
+  initDb,
+  updateRecord,
+  upsertUser,
+} = require('./db');
 const { createAddHandler } = require('./handlers/add');
+const { createApiTokenHandler } = require('./handlers/apiToken');
 const { createRecordHandler } = require('./handlers/record');
 const { createForceHandler } = require('./handlers/force');
 const { createStatusHandler } = require('./handlers/status');
@@ -74,9 +84,15 @@ const handleForce = createForceHandler({
   errors: ERRORS,
   sendEphemeral,
 });
+const handleApiToken = createApiTokenHandler({
+  createApiToken,
+  getApiTokenByChat,
+  sendEphemeral,
+});
 
 bot.start((ctx) => {
   sendEphemeral(ctx, COMMANDS_TEXT);
+  handleApiToken(ctx);
 });
 
 bot.use((ctx, next) => {

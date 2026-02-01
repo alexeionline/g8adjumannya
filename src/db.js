@@ -41,6 +41,17 @@ async function initDb() {
       PRIMARY KEY (chat_id, user_id),
       FOREIGN KEY (user_id) REFERENCES users (user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS api_tokens (
+      token TEXT PRIMARY KEY,
+      chat_id BIGINT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_chat_id_idx
+    ON api_tokens (chat_id);
   `);
 
   await pool.query(`
@@ -230,6 +241,46 @@ async function getChatRecord(chatId) {
   return result.rows;
 }
 
+async function createApiToken(chatId, token) {
+  const now = new Date().toISOString();
+  await pool.query(
+    `
+      INSERT INTO api_tokens (token, chat_id, created_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (chat_id) DO NOTHING
+    `,
+    [token, chatId, now]
+  );
+}
+
+async function getApiTokenByChat(chatId) {
+  const result = await pool.query(
+    `
+      SELECT token
+      FROM api_tokens
+      WHERE chat_id = $1
+      LIMIT 1
+    `,
+    [chatId]
+  );
+
+  return result.rows[0] ? result.rows[0].token : null;
+}
+
+async function getChatIdByToken(token) {
+  const result = await pool.query(
+    `
+      SELECT chat_id
+      FROM api_tokens
+      WHERE token = $1
+      LIMIT 1
+    `,
+    [token]
+  );
+
+  return result.rows[0] ? result.rows[0].chat_id : null;
+}
+
 module.exports = {
   initDb,
   addCount,
@@ -238,5 +289,8 @@ module.exports = {
   getUserHistory,
   getRecordsByChat,
   getChatRecord,
+  createApiToken,
+  getChatIdByToken,
+  getApiTokenByChat,
   upsertUser,
 };

@@ -75,13 +75,13 @@
 1. Создать проект в Railway и подключить GitHub репозиторий.
 2. Добавить **Postgres** к проекту (New → Database → Postgres).
 3. Создать три сервиса из одного репозитория:
-   - **Bot** — Start Command: `npm start`
+   - **Bot** — Start Command: `npm run start:bot`
    - **API** — Start Command: `npm run start:api`
-   - **Web** — будет добавлен после появления фронтенда
+   - **Web** — Build Command: `npm run build:web`, Start Command: `npm run start:web`
 4. В разделе **Variables** для Bot и API добавить:
    - `DATABASE_URL` (Railway добавит автоматически при подключении Postgres)
    - `BOT_TOKEN` (только для Bot)
-   - `API_TOKEN` и `API_CHAT_ID` (только для API, см. `docs/API.md`)
+5. Для API токенов использовать команду `/start` в нужном чате.
 
 **Важно:** токен хранится только в переменных окружения Railway и не должен попадать в репозиторий.
 

@@ -13,16 +13,7 @@ https://<your-domain>/api
 
 Bearer token, scoped to allowed chat IDs.
 
-Option 1: single token + single chat:
-```
-API_TOKEN=...
-API_CHAT_ID=...
-```
-
-Option 2: multiple tokens and chat lists (JSON):
-```
-API_TOKENS_JSON={"tokenA":[-100123],"tokenB":[-100123,-100456]}
-```
+Tokens are issued by the bot via `/start` in the desired chat.
 
 Request header:
 ```
@@ -55,7 +46,6 @@ Response:
 Body:
 ```
 {
-  "chat_id": 123,
   "user_id": 456,
   "delta": 10,
   "date": "2026-01-28", // optional, defaults to today
@@ -78,7 +68,7 @@ Response:
 
 Query:
 ```
-?chat_id=123&date=2026-01-28
+?date=2026-01-28
 ```
 
 Response:
@@ -105,7 +95,7 @@ Response:
 
 Query:
 ```
-?chat_id=123
+(no query params)
 ```
 
 Response:
@@ -132,7 +122,7 @@ Response:
 
 Query:
 ```
-?chat_id=123&user_id=456
+?user_id=456
 ```
 
 Response:

@@ -4,10 +4,12 @@
   "description": "Бот для группового чата друзей (около 10 человек), чтобы отслеживать ежедневный челлендж на 100 отжиманий.",
   "main": "src/index.js",
   "scripts": {
+    "postinstall": "npm --prefix web install --include=dev",
     "start": "concurrently \"npm run start:bot\" \"npm run start:api\" \"npm run start:web\"",
     "start:bot": "node src/index.js",
     "start:api": "node src/api/server.js",
-    "start:web": "npm --prefix web run dev -- --host 0.0.0.0 --port 5173"
+    "build:web": "npm --prefix web run build",
+    "start:web": "npm --prefix web run preview -- --host 0.0.0.0 --port ${PORT:-4173}"
   },
   "keywords": [],
   "author": "",
