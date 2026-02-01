@@ -11,88 +11,94 @@ const pool = new Pool({
 });
 
 async function initDb() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      user_id BIGINT PRIMARY KEY,
-      username TEXT,
-      first_name TEXT,
-      last_name TEXT,
-      updated_at TIMESTAMPTZ NOT NULL
-    );
+  const lockId = 482901236;
+  await pool.query('SELECT pg_advisory_lock($1)', [lockId]);
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        user_id BIGINT PRIMARY KEY,
+        username TEXT,
+        first_name TEXT,
+        last_name TEXT,
+        updated_at TIMESTAMPTZ NOT NULL
+      );
 
-    CREATE TABLE IF NOT EXISTS daily_counts (
-      chat_id BIGINT NOT NULL,
-      user_id BIGINT NOT NULL,
-      date DATE NOT NULL,
-      count INTEGER NOT NULL DEFAULT 0,
-      updated_at TIMESTAMPTZ NOT NULL,
-      PRIMARY KEY (chat_id, user_id, date),
-      FOREIGN KEY (user_id) REFERENCES users (user_id)
-    );
+      CREATE TABLE IF NOT EXISTS daily_counts (
+        chat_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
+        date DATE NOT NULL,
+        count INTEGER NOT NULL DEFAULT 0,
+        updated_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (chat_id, user_id, date),
+        FOREIGN KEY (user_id) REFERENCES users (user_id)
+      );
 
-    CREATE TABLE IF NOT EXISTS records (
-      chat_id BIGINT NOT NULL,
-      user_id BIGINT NOT NULL,
-      max_add INTEGER NOT NULL DEFAULT 0,
-      record_count INTEGER NOT NULL DEFAULT 0,
-      record_date DATE NOT NULL,
-      max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE,
-      updated_at TIMESTAMPTZ NOT NULL,
-      PRIMARY KEY (chat_id, user_id),
-      FOREIGN KEY (user_id) REFERENCES users (user_id)
-    );
+      CREATE TABLE IF NOT EXISTS records (
+        chat_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
+        max_add INTEGER NOT NULL DEFAULT 0,
+        record_count INTEGER NOT NULL DEFAULT 0,
+        record_date DATE NOT NULL,
+        max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE,
+        updated_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (chat_id, user_id),
+        FOREIGN KEY (user_id) REFERENCES users (user_id)
+      );
 
-    CREATE TABLE IF NOT EXISTS api_tokens (
-      token TEXT PRIMARY KEY,
-      chat_id BIGINT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL
-    );
-  `);
+      CREATE TABLE IF NOT EXISTS api_tokens (
+        token TEXT PRIMARY KEY,
+        chat_id BIGINT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL
+      );
+    `);
 
-  await pool.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_chat_id_idx
-    ON api_tokens (chat_id);
-  `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_chat_id_idx
+      ON api_tokens (chat_id);
+    `);
 
-  await pool.query(`
-    DO $$
-    BEGIN
-      IF NOT EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_name = 'records' AND column_name = 'max_add'
-      ) THEN
-        ALTER TABLE records ADD COLUMN max_add INTEGER NOT NULL DEFAULT 0;
-        UPDATE records SET max_add = record_count;
-      END IF;
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_name = 'records' AND column_name = 'max_add'
+        ) THEN
+          ALTER TABLE records ADD COLUMN max_add INTEGER NOT NULL DEFAULT 0;
+          UPDATE records SET max_add = record_count;
+        END IF;
 
-      IF NOT EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_name = 'records' AND column_name = 'record_count'
-      ) THEN
-        ALTER TABLE records ADD COLUMN record_count INTEGER NOT NULL DEFAULT 0;
-        UPDATE records SET record_count = max_add;
-      END IF;
+        IF NOT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_name = 'records' AND column_name = 'record_count'
+        ) THEN
+          ALTER TABLE records ADD COLUMN record_count INTEGER NOT NULL DEFAULT 0;
+          UPDATE records SET record_count = max_add;
+        END IF;
 
-      IF NOT EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_name = 'records' AND column_name = 'max_add_initialized'
-      ) THEN
-        ALTER TABLE records ADD COLUMN max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE;
-      END IF;
-    END $$;
-  `);
+        IF NOT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_name = 'records' AND column_name = 'max_add_initialized'
+        ) THEN
+          ALTER TABLE records ADD COLUMN max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE;
+        END IF;
+      END $$;
+    `);
 
-  await pool.query(`
-    UPDATE records
-    SET max_add = 0,
-        record_count = 0,
-        record_date = CURRENT_DATE,
-        max_add_initialized = TRUE
-    WHERE max_add_initialized IS DISTINCT FROM TRUE;
-  `);
+    await pool.query(`
+      UPDATE records
+      SET max_add = 0,
+          record_count = 0,
+          record_date = CURRENT_DATE,
+          max_add_initialized = TRUE
+      WHERE max_add_initialized IS DISTINCT FROM TRUE;
+    `);
+  } finally {
+    await pool.query('SELECT pg_advisory_unlock($1)', [lockId]);
+  }
 }
 
 async function upsertUser(from) {
