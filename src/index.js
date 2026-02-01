@@ -163,6 +163,7 @@ bot.command('web', async (ctx) => {
 
   const webUrl = new URL(url);
   webUrl.searchParams.set('token', token);
+  webUrl.searchParams.set('api_base', webUrl.origin);
   if (ctx.from && ctx.from.id) {
     webUrl.searchParams.set('user_id', String(ctx.from.id));
   }

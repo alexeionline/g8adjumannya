@@ -33,6 +33,10 @@ onMounted(async () => {
     auth.save()
     window.history.replaceState({}, document.title, window.location.pathname)
   }
+  if (!auth.apiBase) {
+    auth.apiBase = window.location.origin
+    auth.save()
+  }
   historyUserId.value = auth.defaultUserId || ''
   if (auth.isReady) {
     await data.loadAll(auth, historyUserId.value || auth.defaultUserId)
@@ -125,6 +129,18 @@ function moveMonth(direction) {
   <div class="app">
     <div class="phone">
       <AppHeader title="G8 Adjumannya" />
+
+      <section v-if="!auth.isReady" class="card">
+        <h2>Нет доступа</h2>
+        <div class="divider"></div>
+        <p>Открой WebApp через команду /web в нужном чате.</p>
+      </section>
+
+      <section v-if="data.error" class="card">
+        <h2>Ошибка</h2>
+        <div class="divider"></div>
+        <p>{{ data.error }}</p>
+      </section>
 
       <TodayResults
         :items="todayResults"
