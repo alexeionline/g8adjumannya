@@ -154,9 +154,25 @@ bot.command('web', async (ctx) => {
     return sendEphemeral(ctx, ERRORS.WEB_MISSING);
   }
 
+  const isPrivate = ctx.chat && ctx.chat.type === 'private';
+  const button = { text: 'Open Web App', web_app: { url } };
+
+  if (!isPrivate) {
+    try {
+      await ctx.telegram.sendMessage(ctx.from.id, 'Открыть веб‑приложение:', {
+        reply_markup: {
+          inline_keyboard: [[button]],
+        },
+      });
+      return sendEphemeral(ctx, 'Отправил кнопку в личку.');
+    } catch (error) {
+      return sendEphemeral(ctx, 'Не могу написать в личку. Открой диалог с ботом и отправь /start.');
+    }
+  }
+
   return sendEphemeral(ctx, 'Открыть веб‑приложение:', {
     reply_markup: {
-      inline_keyboard: [[{ text: 'Open Web App', web_app: { url } }]],
+      inline_keyboard: [[button]],
     },
   });
 });
