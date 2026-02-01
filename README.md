@@ -74,10 +74,14 @@
 ## Деплой в Railway (polling)
 1. Создать проект в Railway и подключить GitHub репозиторий.
 2. Добавить **Postgres** к проекту (New → Database → Postgres).
-3. В разделе **Variables** добавить:
-   - `BOT_TOKEN`
+3. Создать три сервиса из одного репозитория:
+   - **Bot** — Start Command: `npm start`
+   - **API** — Start Command: `npm run start:api`
+   - **Web** — будет добавлен после появления фронтенда
+4. В разделе **Variables** для Bot и API добавить:
    - `DATABASE_URL` (Railway добавит автоматически при подключении Postgres)
-4. В разделе **Deployments** убедиться, что команда запуска: `npm start`.
+   - `BOT_TOKEN` (только для Bot)
+   - `API_TOKEN` и `API_CHAT_ID` (только для API, см. `docs/API.md`)
 
 **Важно:** токен хранится только в переменных окружения Railway и не должен попадать в репозиторий.
 

@@ -169,6 +169,22 @@ async function getStatusByDate(chatId, date) {
   return result.rows;
 }
 
+async function getUserHistory(chatId, userId) {
+  const result = await pool.query(
+    `
+      SELECT
+        date,
+        count
+      FROM daily_counts
+      WHERE chat_id = $1 AND user_id = $2
+      ORDER BY date ASC
+    `,
+    [chatId, userId]
+  );
+
+  return result.rows;
+}
+
 async function getRecordsByChat(chatId) {
   const result = await pool.query(
     `
@@ -219,6 +235,7 @@ module.exports = {
   addCount,
   updateRecord,
   getStatusByDate,
+  getUserHistory,
   getRecordsByChat,
   getChatRecord,
   upsertUser,
