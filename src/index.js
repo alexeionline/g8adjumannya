@@ -34,6 +34,7 @@ bot.telegram
     { command: 'add', description: 'Добавить отжимания за сегодня' },
     { command: 'force', description: 'Замотивировать участника' },
     { command: 'record', description: 'Показать рекорды чата' },
+    { command: 'web', description: 'Открыть веб‑приложение' },
     { command: 'status', description: 'Показать статус за дату' },
   ])
   .catch((error) => {
@@ -129,6 +130,15 @@ bot.command('record', async (ctx) => {
 
 bot.command('force', async (ctx) => {
   return handleForce(ctx);
+});
+
+bot.command('web', async (ctx) => {
+  const url = process.env.WEB_APP_URL;
+  if (!url) {
+    return sendEphemeral(ctx, ERRORS.WEB_MISSING);
+  }
+
+  return sendEphemeral(ctx, url);
 });
 
 bot.on('text', async (ctx) => {

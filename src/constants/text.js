@@ -36,6 +36,7 @@ const COMMANDS_TEXT = [
   'Команды:',
   'add X — добавить отжимания за сегодня',
   'force @username — пнуть участника',
+  'web — открыть веб‑приложение',
   'status — статус за сегодня',
   'status DD.MM.YYYY — статус за дату',
 ].join('\n');
@@ -69,6 +70,7 @@ const FORCE_MESSAGES = [
 const ERRORS = {
   ADD_FORMAT: 'Формат: add X (X — положительное число).',
   FORCE_FORMAT: 'Формат: force @username',
+  WEB_MISSING: 'WEB_APP_URL не настроен.',
   STATUS_FORMAT: 'Формат: status или status DD.MM.YYYY.',
   INVALID_DATE: 'Неверный формат даты. Пример: status 24.01.2026',
   NO_RESULTS: (label) => `Результатов за ${label} нет.`,
