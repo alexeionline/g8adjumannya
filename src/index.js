@@ -154,7 +154,11 @@ bot.command('web', async (ctx) => {
     return sendEphemeral(ctx, ERRORS.WEB_MISSING);
   }
 
-  return sendEphemeral(ctx, url);
+  return sendEphemeral(ctx, 'Открыть веб‑приложение:', {
+    reply_markup: {
+      inline_keyboard: [[{ text: 'Open Web App', web_app: { url } }]],
+    },
+  });
 });
 
 bot.on('text', async (ctx) => {
