@@ -232,7 +232,7 @@ button {
 }
 
 .day.empty {
-  color: #cbd5f5;
+  color: #b0b7c3;
 }
 
 .day.high {
@@ -243,6 +243,4 @@ button {
   color: #f59e0b;
 }
 
-.day.low {
-  color: #ef4444;
-}
+ 

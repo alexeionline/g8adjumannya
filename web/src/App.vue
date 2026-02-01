@@ -86,7 +86,7 @@ const calendarDays = computed(() => {
   for (let day = 1; day <= daysInMonth; day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const count = Number(data.historyDays?.[dateKey] || 0)
-    const tone = count >= 80 ? 'high' : count >= 40 ? 'mid' : count > 0 ? 'low' : 'empty'
+    const tone = count >= 100 ? 'high' : count > 0 ? 'mid' : 'empty'
     result.push({ key: dateKey, value: day, tone })
   }
 
@@ -95,7 +95,11 @@ const calendarDays = computed(() => {
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
-  const [year, month, day] = dateStr.split('-')
+  const parsed = new Date(dateStr)
+  if (Number.isNaN(parsed.getTime())) return dateStr
+  const day = String(parsed.getDate()).padStart(2, '0')
+  const month = String(parsed.getMonth() + 1).padStart(2, '0')
+  const year = parsed.getFullYear()
   return `${day}.${month}.${year}`
 }
 
