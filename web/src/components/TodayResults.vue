@@ -21,7 +21,7 @@ const emit = defineEmits(['update:userInput'])
     <div class="input-row">
       <input
         type="text"
-        placeholder="Enter user_id..."
+        placeholder="Добавить кол-во"
         :value="userInput"
         @input="emit('update:userInput', $event.target.value)"
       />

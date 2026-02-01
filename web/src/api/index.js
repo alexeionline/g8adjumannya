@@ -32,3 +32,13 @@ export async function fetchHistory(auth, userId) {
   })
   return data
 }
+
+export async function addPushups(auth, userId, delta) {
+  requireAuth(auth)
+  const client = createApiClient(auth)
+  const { data } = await client.post('/add', {
+    user_id: userId,
+    delta,
+  })
+  return data
+}

@@ -12,6 +12,7 @@ const data = useDataStore()
 
 const monthCursor = ref(new Date())
 const historyUserId = ref('')
+const addCountInput = ref('')
 
 onMounted(async () => {
   auth.load()
@@ -82,6 +83,20 @@ async function loadHistory() {
   await data.loadHistory(auth, Number(historyUserId.value))
 }
 
+async function submitAdd() {
+  const delta = Number(addCountInput.value)
+  if (!Number.isFinite(delta)) {
+    data.error = 'Введите количество повторений'
+    return
+  }
+  if (!historyUserId.value) {
+    data.error = 'Укажи user_id в настройках'
+    return
+  }
+  await data.addCount(auth, Number(historyUserId.value), delta)
+  addCountInput.value = ''
+}
+
 function moveMonth(direction) {
   const next = new Date(monthCursor.value)
   next.setMonth(next.getMonth() + direction)
@@ -96,9 +111,9 @@ function moveMonth(direction) {
 
       <TodayResults
         :items="todayResults"
-        :user-input="historyUserId"
-        @update:userInput="historyUserId = $event"
-        :on-submit="loadHistory"
+        :user-input="addCountInput"
+        @update:userInput="addCountInput = $event"
+        :on-submit="submitAdd"
       />
 
       <Leaderboard :items="leaderboard" />
