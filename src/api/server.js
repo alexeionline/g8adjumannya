@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
@@ -14,9 +15,6 @@ const {
 } = require('../db');
 
 dayjs.extend(customParseFormat);
-
-const app = express();
-app.use(express.json());
 
 async function authMiddleware(req, res, next) {
   const header = req.headers.authorization || '';
@@ -40,13 +38,18 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-app.use(authMiddleware);
+function createApiApp() {
+  const app = express();
+  app.use(express.json());
 
-app.get('/health', (req, res) => {
-  res.json({ ok: true });
-});
+  const distPath = path.join(__dirname, '../../web/dist');
+  app.use(express.static(distPath));
 
-app.post('/add', async (req, res) => {
+  app.get('/health', (req, res) => {
+    res.json({ ok: true });
+  });
+
+  app.post('/add', authMiddleware, async (req, res) => {
   const userId = Number(req.body.user_id);
   const delta = Number(req.body.delta);
   if (!Number.isFinite(userId) || !Number.isFinite(delta) || delta < 0) {
@@ -71,10 +74,10 @@ app.post('/add', async (req, res) => {
     delta,
   });
 
-  res.json({ total });
-});
+    res.json({ total });
+  });
 
-app.get('/status', async (req, res) => {
+  app.get('/status', authMiddleware, async (req, res) => {
   const date = req.query.date
     ? dayjs(req.query.date, 'YYYY-MM-DD', true)
     : dayjs();
@@ -83,15 +86,15 @@ app.get('/status', async (req, res) => {
   }
 
   const rows = await getStatusByDate(req.chatId, date.format('YYYY-MM-DD'));
-  res.json({ date: date.format('YYYY-MM-DD'), rows });
-});
+    res.json({ date: date.format('YYYY-MM-DD'), rows });
+  });
 
-app.get('/records', async (req, res) => {
-  const rows = await getRecordsByChat(req.chatId);
-  res.json({ rows });
-});
+  app.get('/records', authMiddleware, async (req, res) => {
+    const rows = await getRecordsByChat(req.chatId);
+    res.json({ rows });
+  });
 
-app.get('/history', async (req, res) => {
+  app.get('/history', authMiddleware, async (req, res) => {
   const userId = Number(req.query.user_id);
   if (!Number.isFinite(userId)) {
     return res.status(400).json({ error: 'user_id is required' });
@@ -103,18 +106,30 @@ app.get('/history', async (req, res) => {
     return acc;
   }, {});
 
-  res.json({ user_id: userId, chat_id: req.chatId, days });
-});
+    res.json({ user_id: userId, chat_id: req.chatId, days });
+  });
 
-const port = Number(process.env.API_PORT || 3000);
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 
-initDb()
-  .then(() => {
-    app.listen(port, () => {
-      console.log(`API listening on ${port}`);
-    });
-  })
-  .catch((error) => {
+  return app;
+}
+
+async function startApi() {
+  await initDb();
+  const app = createApiApp();
+  const port = Number(process.env.PORT || process.env.API_PORT || 3000);
+  app.listen(port, () => {
+    console.log(`API listening on ${port}`);
+  });
+}
+
+if (require.main === module) {
+  startApi().catch((error) => {
     console.error('Failed to start API:', error);
     process.exit(1);
   });
+}
+
+module.exports = { createApiApp, startApi };

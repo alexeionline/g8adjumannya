@@ -213,15 +213,22 @@ bot.on('text', async (ctx) => {
   }
 });
 
-async function start() {
-  await initDb();
+async function startBot(options = {}) {
+  const { skipInitDb = false } = options;
+  if (!skipInitDb) {
+    await initDb();
+  }
   await bot.launch();
 }
 
-start().catch((error) => {
-  console.error('Не удалось запустить бота:', error);
-  process.exit(1);
-});
+if (require.main === module) {
+  startBot().catch((error) => {
+    console.error('Не удалось запустить бота:', error);
+    process.exit(1);
+  });
+}
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+module.exports = { startBot };
