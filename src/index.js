@@ -182,7 +182,7 @@ bot.command('web', async (ctx) => {
       const text = dmLink
         ? `Добавил кнопку в личку: ${dmLink}`
         : 'Добавил кнопку в личку.';
-      return sendEphemeral(ctx, text);
+      return sendEphemeral(ctx, text, undefined, 10_000);
     } catch (error) {
       return sendEphemeral(ctx, 'Не могу написать в личку. Открой диалог с ботом и отправь /start.');
     }
