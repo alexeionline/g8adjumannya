@@ -13,7 +13,7 @@ const emit = defineEmits(['update:userInput'])
     <h2>Today's Results</h2>
     <div class="divider"></div>
     <ul class="list">
-      <li v-for="item in items" :key="item.key">
+      <li v-for="item in items" :key="item.key" :class="{ 'result-done': item.value >= 100 }">
         <span>{{ item.label }}</span>
         <span>{{ item.value }}</span>
       </li>

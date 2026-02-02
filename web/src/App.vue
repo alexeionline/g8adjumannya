@@ -96,6 +96,15 @@ const calendarDays = computed(() => {
 const participationDays = computed(() =>
   Object.values(data.historyDays || {}).filter((count) => Number(count) > 0).length
 )
+const totalPushups = computed(() =>
+  Object.values(data.historyDays || {}).reduce((sum, count) => sum + Number(count || 0), 0)
+)
+const averagePushups = computed(() => {
+  if (!participationDays.value) {
+    return '0'
+  }
+  return (totalPushups.value / participationDays.value).toFixed(1)
+})
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -162,7 +171,20 @@ function moveMonth(direction) {
       <section class="card">
         <h2>Дней в челлендже</h2>
         <div class="divider"></div>
-        <p class="stat-value">{{ participationDays }}</p>
+        <ul class="stats">
+          <li>
+            <span>Дней участия</span>
+            <span>{{ participationDays }}</span>
+          </li>
+          <li>
+            <span>Всего отжиманий</span>
+            <span>{{ totalPushups }}</span>
+          </li>
+          <li>
+            <span>Среднее за день</span>
+            <span>{{ averagePushups }}</span>
+          </li>
+        </ul>
       </section>
 
       <CalendarView
