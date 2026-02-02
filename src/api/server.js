@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const dayjs = require('dayjs');
+const { Telegram } = require('telegraf');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
   addCount,
@@ -13,8 +14,32 @@ const {
   initDb,
   upsertUser,
 } = require('../db');
+const { formatAddHeader, formatDisplayName } = require('../utils/format');
 
 dayjs.extend(customParseFormat);
+const telegram = process.env.BOT_TOKEN ? new Telegram(process.env.BOT_TOKEN) : null;
+
+function normalizeUser(userId, user) {
+  if (!user) {
+    return { user_id: userId };
+  }
+  return {
+    user_id: user.id || user.user_id || userId,
+    username: user.username || null,
+    first_name: user.first_name || null,
+    last_name: user.last_name || null,
+  };
+}
+
+function notifyAddInChat(chatId, user, delta, total) {
+  if (!telegram) {
+    return;
+  }
+  const name = formatDisplayName(user);
+  const header = formatAddHeader(name);
+  const message = `${header} +${delta} / Всего: ${total}`;
+  telegram.sendMessage(chatId, message).catch(() => {});
+}
 
 async function authMiddleware(req, res, next) {
   const header = req.headers.authorization || '';
@@ -63,6 +88,7 @@ function createApiApp() {
     return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
   }
 
+  const normalizedUser = normalizeUser(userId, req.body.user);
   if (req.body.user && req.body.user.id === userId) {
     await upsertUser(req.body.user);
   }
@@ -74,7 +100,8 @@ function createApiApp() {
     delta,
   });
 
-    res.json({ total });
+  notifyAddInChat(req.chatId, normalizedUser, delta, total);
+  res.json({ total });
   });
 
   app.get('/status', authMiddleware, async (req, res) => {
