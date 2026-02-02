@@ -254,6 +254,24 @@ async function getUserHistory(chatId, userId) {
   return result.rows;
 }
 
+async function getUserById(userId) {
+  const result = await pool.query(
+    `
+      SELECT
+        user_id,
+        username,
+        first_name,
+        last_name
+      FROM users
+      WHERE user_id = $1
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return result.rows[0] || null;
+}
+
 async function getRecordsByChat(chatId) {
   const result = await pool.query(
     `
@@ -345,6 +363,7 @@ module.exports = {
   updateRecord,
   getStatusByDate,
   getUserHistory,
+  getUserById,
   getRecordsByChat,
   getChatRecord,
   createApiToken,

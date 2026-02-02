@@ -11,6 +11,7 @@ const {
   getRecordsByChat,
   getStatusByDate,
   getUserHistory,
+  getUserById,
   initDb,
   upsertUser,
 } = require('../db');
@@ -88,9 +89,16 @@ function createApiApp() {
     return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
   }
 
-  const normalizedUser = normalizeUser(userId, req.body.user);
+  let normalizedUser = normalizeUser(userId, req.body.user);
   if (req.body.user && req.body.user.id === userId) {
     await upsertUser(req.body.user);
+  }
+
+  if (!normalizedUser.username && !normalizedUser.first_name && !normalizedUser.last_name) {
+    const storedUser = await getUserById(userId);
+    if (storedUser) {
+      normalizedUser = storedUser;
+    }
   }
 
   const total = await addCount({
