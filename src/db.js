@@ -50,6 +50,11 @@ async function initDb() {
         chat_id BIGINT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS migration_flags (
+        name TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL
+      );
     `);
 
     await pool.query(`
@@ -96,6 +101,49 @@ async function initDb() {
           max_add_initialized = TRUE
       WHERE max_add_initialized IS DISTINCT FROM TRUE;
     `);
+
+    const backfillKey = 'backfill_daily_counts_2025_11_18_2026_01_23_32349656';
+    const backfillCheck = await pool.query(
+      'SELECT 1 FROM migration_flags WHERE name = $1 LIMIT 1',
+      [backfillKey]
+    );
+
+    if (backfillCheck.rowCount === 0) {
+      await pool.query('BEGIN');
+      try {
+        await pool.query(
+          'INSERT INTO migration_flags (name, applied_at) VALUES ($1, NOW())',
+          [backfillKey]
+        );
+
+        await pool.query(
+          `
+            INSERT INTO users (user_id, username, first_name, last_name, updated_at)
+            VALUES ($1, NULL, NULL, NULL, NOW())
+            ON CONFLICT (user_id) DO UPDATE
+              SET updated_at = EXCLUDED.updated_at
+          `,
+          ['32349656']
+        );
+
+        await pool.query(
+          `
+            INSERT INTO daily_counts (chat_id, user_id, date, count, updated_at)
+            SELECT $2, $1, d::date, $5, NOW()
+            FROM generate_series($3::date, $4::date, interval '1 day') AS d
+            ON CONFLICT (chat_id, user_id, date) DO UPDATE
+              SET count = EXCLUDED.count,
+                  updated_at = EXCLUDED.updated_at
+          `,
+          ['32349656', '-1001476494800', '2025-11-18', '2026-01-23', 100]
+        );
+
+        await pool.query('COMMIT');
+      } catch (error) {
+        await pool.query('ROLLBACK');
+        throw error;
+      }
+    }
   } finally {
     await pool.query('SELECT pg_advisory_unlock($1)', [lockId]);
   }
