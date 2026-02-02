@@ -53,6 +53,11 @@ bot.telegram
   });
 
 const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
+const TEN_MINUTES_MS = 10 * 60 * 1000;
+const TEN_SECONDS_MS = 10 * 1000;
+const sendAddReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
+const sendStatusReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
+const sendRecordReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const { parseAdd, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
 const handleAdd = createAddHandler({
   dayjs,
@@ -61,14 +66,14 @@ const handleAdd = createAddHandler({
   updateRecord,
   formatDisplayName,
   formatAddHeader,
-  sendEphemeral,
+  sendEphemeral: sendAddReply,
 });
 const handleRecord = createRecordHandler({
   dayjs,
   getRecordsByChat,
   formatDisplayName,
   formatIndexEmoji,
-  sendEphemeral,
+  sendEphemeral: sendRecordReply,
   errors: ERRORS,
 });
 const handleStatus = createStatusHandler({
@@ -77,7 +82,7 @@ const handleStatus = createStatusHandler({
   formatDisplayName,
   formatProgressBar,
   formatIndexEmoji,
-  sendEphemeral,
+  sendEphemeral: sendStatusReply,
   errors: ERRORS,
 });
 const handleForce = createForceHandler({
@@ -99,7 +104,13 @@ bot.start((ctx) => {
 bot.use((ctx, next) => {
   const text = ctx.message && ctx.message.text;
   if (text && text.trim().startsWith('/')) {
-    scheduleDeleteMessage(ctx);
+    const command = text.trim().split(/\s+/)[0].slice(1);
+    const commandName = command.split('@')[0].toLowerCase();
+    if (commandName === 'status' || commandName === 'record') {
+      scheduleDeleteMessage(ctx, TEN_SECONDS_MS);
+    } else if (commandName !== 'add') {
+      scheduleDeleteMessage(ctx);
+    }
   }
 
   return next();
@@ -111,7 +122,7 @@ bot.command('add', async (ctx) => {
     return handleAdd(ctx, value);
   }
 
-  await sendEphemeral(ctx, 'Сколько отжиманий добавить?', {
+  await sendAddReply(ctx, 'Сколько отжиманий добавить?', {
     reply_markup: { force_reply: true, selective: true },
   });
   ctx.session = {

@@ -55,12 +55,12 @@ function createDeletionHelpers(bot, delayMs = 30_000) {
     });
   }
 
-  function scheduleDeleteMessage(ctx) {
+  function scheduleDeleteMessage(ctx, overrideDelayMs) {
     if (!ctx || !ctx.chat || !ctx.message || !ctx.message.message_id) {
       return;
     }
 
-    enqueueDeletion(ctx.chat.id, ctx.message.message_id);
+    enqueueDeletion(ctx.chat.id, ctx.message.message_id, overrideDelayMs);
   }
 
   return {
