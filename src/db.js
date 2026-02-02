@@ -102,7 +102,7 @@ async function initDb() {
       WHERE max_add_initialized IS DISTINCT FROM TRUE;
     `);
 
-    const backfillKey = 'backfill_daily_counts_2025_11_18_2026_01_23_32349656';
+    const backfillKey = 'backfill_daily_counts_2025_11_23_2026_01_23_164828938';
     const backfillCheck = await pool.query(
       'SELECT 1 FROM migration_flags WHERE name = $1 LIMIT 1',
       [backfillKey]
@@ -123,7 +123,7 @@ async function initDb() {
             ON CONFLICT (user_id) DO UPDATE
               SET updated_at = EXCLUDED.updated_at
           `,
-          ['32349656']
+          ['164828938']
         );
 
         await pool.query(
@@ -135,7 +135,7 @@ async function initDb() {
               SET count = EXCLUDED.count,
                   updated_at = EXCLUDED.updated_at
           `,
-          ['32349656', '-1001476494800', '2025-11-18', '2026-01-23', 100]
+          ['164828938', '-1001476494800', '2025-11-23', '2026-01-23', 100]
         );
 
         await pool.query('COMMIT');
