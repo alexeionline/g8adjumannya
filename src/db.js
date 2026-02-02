@@ -254,6 +254,22 @@ async function getUserHistory(chatId, userId) {
   return result.rows;
 }
 
+async function hasUserReached100(chatId, userId) {
+  const result = await pool.query(
+    `
+      SELECT 1
+      FROM daily_counts
+      WHERE chat_id = $1
+        AND user_id = $2
+        AND count >= 100
+      LIMIT 1
+    `,
+    [chatId, userId]
+  );
+
+  return result.rowCount > 0;
+}
+
 async function getUserById(userId) {
   const result = await pool.query(
     `
@@ -363,6 +379,7 @@ module.exports = {
   updateRecord,
   getStatusByDate,
   getUserHistory,
+  hasUserReached100,
   getUserById,
   getRecordsByChat,
   getChatRecord,

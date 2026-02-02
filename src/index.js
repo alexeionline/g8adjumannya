@@ -10,6 +10,7 @@ const {
   getApiTokenByChat,
   getRecordsByChat,
   getStatusByDate,
+  hasUserReached100,
   initDb,
   updateRecord,
   upsertUser,
@@ -27,7 +28,7 @@ const {
   formatProgressBar,
 } = require('./utils/format');
 const { createParsers } = require('./utils/parse');
-const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES } = require('./constants/text');
+const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES, FIRST_100_MESSAGE } = require('./constants/text');
 
 dayjs.extend(customParseFormat);
 
@@ -64,9 +65,11 @@ const handleAdd = createAddHandler({
   upsertUser,
   addCount,
   updateRecord,
+  hasUserReached100,
   formatDisplayName,
   formatAddHeader,
   sendEphemeral: sendAddReply,
+  first100Message: FIRST_100_MESSAGE,
 });
 const handleRecord = createRecordHandler({
   dayjs,
