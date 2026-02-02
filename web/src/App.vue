@@ -169,7 +169,7 @@ function moveMonth(direction) {
       <Leaderboard :items="leaderboard" />
 
       <section class="card">
-        <h2>Дней в челлендже</h2>
+        <h2>Статистика</h2>
         <div class="divider"></div>
         <ul class="stats">
           <li>

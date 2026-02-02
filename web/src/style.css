@@ -112,6 +112,12 @@ button {
   padding: 4px 8px;
 }
 
+.list li.result-pending {
+  background: #fff6db;
+  border-radius: 10px;
+  padding: 4px 8px;
+}
+
 .input-row {
   display: flex;
   gap: 8px;

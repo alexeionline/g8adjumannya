@@ -6,7 +6,7 @@ defineProps({
 
 <template>
   <section class="card">
-    <h2>Leaderboard</h2>
+    <h2>Лучшие результаты</h2>
     <div class="divider"></div>
     <ul class="leaderboard">
       <li v-for="item in items" :key="item.key" class="leader-item">
