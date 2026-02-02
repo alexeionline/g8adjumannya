@@ -9,7 +9,8 @@
     "start:bot": "node src/index.js",
     "start:api": "node src/api/server.js",
     "build:web": "npm --prefix web run build",
-    "start:web": "npm --prefix web run preview -- --host 0.0.0.0 --port ${PORT:-4173}"
+    "start:web": "npm --prefix web run preview -- --host 0.0.0.0 --port ${PORT:-4173}",
+    "demo": "VITE_DEMO=1 npm --prefix web run dev -- --host 0.0.0.0 --port 5173"
   },
   "keywords": [],
   "author": "",

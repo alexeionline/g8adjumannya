@@ -9,12 +9,18 @@ import { useDataStore } from './stores/data'
 
 const auth = useAuthStore()
 const data = useDataStore()
+const isDemo = import.meta.env.VITE_DEMO === '1'
 
 const monthCursor = ref(new Date())
 const historyUserId = ref('')
 const addCountInput = ref('')
 
 onMounted(async () => {
+  if (isDemo) {
+    historyUserId.value = String(data.demoUserId || '')
+    await data.loadAll(auth, historyUserId.value)
+    return
+  }
   auth.load()
   const params = new URLSearchParams(window.location.search)
   const token = params.get('token')
@@ -147,7 +153,7 @@ function moveMonth(direction) {
     <div class="phone">
       <AppHeader title="G8 Adjumannya" />
 
-      <section v-if="!auth.isReady" class="card">
+      <section v-if="!auth.isReady && !isDemo" class="card">
         <h2>Нет доступа</h2>
         <div class="divider"></div>
         <p>Открой WebApp через команду /web в нужном чате.</p>
