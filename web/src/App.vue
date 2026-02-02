@@ -93,6 +93,10 @@ const calendarDays = computed(() => {
   return result
 })
 
+const participationDays = computed(() =>
+  Object.values(data.historyDays || {}).filter((count) => Number(count) > 0).length
+)
+
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const parsed = new Date(dateStr)
@@ -154,6 +158,12 @@ function moveMonth(direction) {
       />
 
       <Leaderboard :items="leaderboard" />
+
+      <section class="card">
+        <h2>Дней в челлендже</h2>
+        <div class="divider"></div>
+        <p class="stat-value">{{ participationDays }}</p>
+      </section>
 
       <CalendarView
         :month-label="monthLabel"

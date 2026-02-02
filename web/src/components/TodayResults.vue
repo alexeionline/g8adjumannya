@@ -18,6 +18,7 @@ const emit = defineEmits(['update:userInput'])
         <span>{{ item.value }}</span>
       </li>
     </ul>
+    <div class="divider"></div>
     <div class="input-row">
       <input
         type="text"

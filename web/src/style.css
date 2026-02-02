@@ -107,7 +107,6 @@ button {
 }
 
 .input-row {
-  margin-top: 12px;
   display: flex;
   gap: 8px;
 }
@@ -158,6 +157,14 @@ button {
 
 .leader-right .value {
   font-weight: 600;
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2a44;
+  text-align: center;
 }
 
 .medal {
@@ -236,11 +243,15 @@ button {
 }
 
 .day.high {
-  color: #22c55e;
+  background: #22c55e;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .day.mid {
-  color: #f59e0b;
+  background: #f59e0b;
+  color: #ffffff;
+  font-weight: 700;
 }
 
  
