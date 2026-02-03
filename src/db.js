@@ -53,6 +53,15 @@ async function initDb() {
         FOREIGN KEY (user_id) REFERENCES users (user_id)
       );
 
+      CREATE TABLE IF NOT EXISTS user_records (
+        user_id BIGINT PRIMARY KEY,
+        max_add INTEGER NOT NULL DEFAULT 0,
+        record_count INTEGER NOT NULL DEFAULT 0,
+        record_date DATE NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (user_id)
+      );
+
       CREATE TABLE IF NOT EXISTS api_tokens (
         token TEXT PRIMARY KEY,
         chat_id BIGINT NOT NULL,
@@ -113,6 +122,26 @@ async function initDb() {
           record_date = CURRENT_DATE,
           max_add_initialized = TRUE
       WHERE max_add_initialized IS DISTINCT FROM TRUE;
+    `);
+
+    await pool.query(`
+      INSERT INTO user_records (user_id, max_add, record_count, record_date, updated_at)
+      SELECT DISTINCT ON (user_id)
+        user_id,
+        max_add,
+        record_count,
+        record_date,
+        updated_at
+      FROM records
+      ORDER BY user_id, record_count DESC, max_add DESC, record_date DESC
+      ON CONFLICT (user_id) DO UPDATE SET
+        max_add = GREATEST(user_records.max_add, excluded.max_add),
+        record_count = GREATEST(user_records.record_count, excluded.record_count),
+        record_date = CASE
+          WHEN excluded.record_count > user_records.record_count THEN excluded.record_date
+          ELSE user_records.record_date
+        END,
+        updated_at = excluded.updated_at;
     `);
 
     const runBackfill = false;
@@ -208,27 +237,24 @@ async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
   await pool.query(
     `
-      INSERT INTO records (
-        chat_id,
+      INSERT INTO user_records (
         user_id,
         max_add,
         record_count,
         record_date,
-        max_add_initialized,
         updated_at
       )
-      VALUES ($1, $2, $3, $3, $4, TRUE, $5)
-      ON CONFLICT(chat_id, user_id) DO UPDATE SET
-        max_add = GREATEST(records.max_add, excluded.max_add),
-        record_count = GREATEST(records.record_count, excluded.record_count),
+      VALUES ($1, $2, $2, $3, $4)
+      ON CONFLICT(user_id) DO UPDATE SET
+        max_add = GREATEST(user_records.max_add, excluded.max_add),
+        record_count = GREATEST(user_records.record_count, excluded.record_count),
         record_date = CASE
-          WHEN excluded.max_add > records.max_add THEN excluded.record_date
-          ELSE records.record_date
+          WHEN excluded.record_count > user_records.record_count THEN excluded.record_date
+          ELSE user_records.record_date
         END,
-        max_add_initialized = TRUE,
         updated_at = excluded.updated_at
     `,
-    [chatId, userId, count, date, now]
+    [userId, count, date, now]
   );
 }
 
@@ -483,14 +509,13 @@ async function getRecordsByChat(chatId) {
         WHERE chat_id = $1
       ),
       best_records AS (
-        SELECT DISTINCT ON (r.user_id)
-          r.user_id,
-          r.max_add,
-          r.record_date,
-          r.record_count
-        FROM records r
-        JOIN eligible_users eu ON eu.user_id = r.user_id
-        ORDER BY r.user_id, r.record_count DESC, r.record_date ASC
+        SELECT
+          ur.user_id,
+          ur.max_add,
+          ur.record_date,
+          ur.record_count
+        FROM user_records ur
+        JOIN eligible_users eu ON eu.user_id = ur.user_id
       )
       SELECT
         br.user_id,
