@@ -6,6 +6,12 @@ defineProps({
 })
 
 const emit = defineEmits(['update:userInput'])
+
+function progressWidth(value) {
+  const numeric = Number(value) || 0
+  const percent = Math.max(0, Math.min(100, numeric))
+  return `${percent}%`
+}
 </script>
 
 <template>
@@ -18,8 +24,11 @@ const emit = defineEmits(['update:userInput'])
         :key="item.key"
         :class="{ 'result-done': item.value >= 100, 'result-pending': item.value < 100 }"
       >
-        <span>{{ item.label }}</span>
-        <span>{{ item.value }}</span>
+        <div class="today-bar">
+          <div class="today-bar-fill" :style="{ width: progressWidth(item.value) }"></div>
+          <span class="today-count">{{ item.value }}</span>
+          <span class="today-name">{{ item.label }}</span>
+        </div>
       </li>
     </ul>
     <div class="divider"></div>
