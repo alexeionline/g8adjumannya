@@ -86,14 +86,14 @@ const calendarDays = computed(() => {
   const result = []
 
   for (let i = 0; i < weekdayIndex; i += 1) {
-    result.push({ key: `empty-${i}`, value: '', tone: 'empty' })
+    result.push({ key: `empty-${i}`, value: '', tone: 'empty', count: null })
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const count = Number(data.historyDays?.[dateKey] || 0)
     const tone = count >= 100 ? 'high' : count > 0 ? 'mid' : 'empty'
-    result.push({ key: dateKey, value: day, tone })
+    result.push({ key: dateKey, value: day, tone, count })
   }
 
   return result

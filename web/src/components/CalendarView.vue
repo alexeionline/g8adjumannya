@@ -24,7 +24,10 @@ defineProps({
       <div class="weekday">S</div>
 
       <div v-for="day in days" :key="day.key" :class="['day', day.tone]">
-        {{ day.value }}
+        <template v-if="day.value">
+          <span class="day-number">{{ day.value }}</span>
+          <span v-if="day.count > 0" class="day-count">{{ day.count }}</span>
+        </template>
       </div>
     </div>
   </section>
