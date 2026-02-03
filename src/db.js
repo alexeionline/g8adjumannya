@@ -258,16 +258,19 @@ async function getStatusByDate(chatId, date) {
   const sharedResult = await pool.query(
     `
       SELECT
-        dc.user_id,
-        SUM(dc.count) AS count,
+        su.user_id,
+        COALESCE(SUM(dc.count), 0) AS count,
         u.username,
         u.first_name,
         u.last_name
-      FROM daily_counts dc
-      LEFT JOIN users u ON u.user_id = dc.user_id
-      WHERE dc.user_id = ANY($1)
-        AND dc.date = $2
-      GROUP BY dc.user_id, u.username, u.first_name, u.last_name
+      FROM (
+        SELECT UNNEST($1::bigint[]) AS user_id
+      ) su
+      LEFT JOIN daily_counts dc
+        ON dc.user_id = su.user_id
+       AND dc.date = $2
+      LEFT JOIN users u ON u.user_id = su.user_id
+      GROUP BY su.user_id, u.username, u.first_name, u.last_name
     `,
     [sharedUsers, date]
   );
