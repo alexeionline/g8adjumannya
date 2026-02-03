@@ -32,7 +32,7 @@ const {
   formatProgressBar,
 } = require('./utils/format');
 const { createParsers } = require('./utils/parse');
-const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES, FIRST_100_MESSAGE } = require('./constants/text');
+const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES, FIRST_100_MESSAGE, HELP_TEXT } = require('./constants/text');
 
 dayjs.extend(customParseFormat);
 
@@ -54,6 +54,7 @@ bot.telegram
     { command: 'share', description: 'Связать результаты между чатами' },
     { command: 'hide', description: 'Скрыть результаты в этом чате' },
     { command: 'status', description: 'Показать статус за дату' },
+    { command: 'help', description: 'Справка по боту' },
   ])
   .catch((error) => {
     console.error('Failed to set bot commands:', error);
@@ -184,6 +185,10 @@ bot.command('share', async (ctx) => {
 
 bot.command('hide', async (ctx) => {
   return handleHide(ctx);
+});
+
+bot.command('help', async (ctx) => {
+  return sendEphemeral(ctx, HELP_TEXT);
 });
 
 bot.command('web', async (ctx) => {
