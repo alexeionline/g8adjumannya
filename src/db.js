@@ -508,6 +508,7 @@ async function getRecordsByChat(chatId) {
       FROM records r
       LEFT JOIN users u ON u.user_id = r.user_id
       WHERE r.user_id = ANY($1)
+        AND r.chat_id IN (SELECT chat_id FROM shared_chats WHERE user_id = r.user_id)
       ORDER BY r.user_id, r.record_count DESC, r.record_date ASC
     `,
     [sharedUsers]
