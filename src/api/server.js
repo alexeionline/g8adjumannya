@@ -10,6 +10,7 @@ const {
   getChatIdByToken,
   getRecordsByChat,
   getStatusByDate,
+  getTotalCountForUserDate,
   getUserHistory,
   getUserById,
   initDb,
@@ -101,12 +102,14 @@ function createApiApp() {
     }
   }
 
-  const total = await addCount({
+  await addCount({
     chatId: req.chatId,
     userId,
     date: date.format('YYYY-MM-DD'),
     delta,
   });
+  const dateStr = date.format('YYYY-MM-DD');
+  const total = await getTotalCountForUserDate(userId, dateStr);
 
   notifyAddInChat(req.chatId, normalizedUser, delta, total);
   res.json({ total });

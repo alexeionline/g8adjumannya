@@ -2,6 +2,7 @@ function createAddHandler({
   dayjs,
   upsertUser,
   addCount,
+  getTotalCountForUserDate,
   updateRecord,
   hasUserReached100,
   formatDisplayName,
@@ -14,12 +15,13 @@ function createAddHandler({
 
     const today = dayjs().format('YYYY-MM-DD');
     const hadReached100 = await hasUserReached100(ctx.chat.id, ctx.from.id);
-    const total = await addCount({
+    await addCount({
       chatId: ctx.chat.id,
       userId: ctx.from.id,
       date: today,
       delta: value,
     });
+    const total = await getTotalCountForUserDate(ctx.from.id, today);
     await updateRecord({
       chatId: ctx.chat.id,
       userId: ctx.from.id,

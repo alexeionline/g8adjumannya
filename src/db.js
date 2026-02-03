@@ -233,6 +233,18 @@ async function addCount({ chatId, userId, date, delta }) {
   return result.rows[0] ? result.rows[0].count : 0;
 }
 
+async function getTotalCountForUserDate(userId, date) {
+  const result = await pool.query(
+    `
+      SELECT COALESCE(SUM(count), 0) AS total
+      FROM daily_counts
+      WHERE user_id = $1 AND date = $2
+    `,
+    [userId, date]
+  );
+  return Number(result.rows[0]?.total ?? 0);
+}
+
 async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
   await pool.query(
@@ -605,6 +617,7 @@ module.exports = {
   getUserById,
   getRecordsByChat,
   getChatRecord,
+  getTotalCountForUserDate,
   createApiToken,
   getChatIdByToken,
   getApiTokenByChat,
