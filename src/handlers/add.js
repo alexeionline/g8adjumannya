@@ -7,7 +7,6 @@ function createAddHandler({
   formatDisplayName,
   formatAddHeader,
   sendEphemeral,
-  sendTyping,
   first100Message,
 }) {
   return async function handleAdd(ctx, value) {
@@ -32,7 +31,7 @@ function createAddHandler({
     const header = formatAddHeader(name);
     const message = `${header} +${value} / Всего: ${total}`;
 
-    const response = await sendTyping(ctx, message);
+    const response = await sendEphemeral(ctx, message);
     if (!hadReached100 && total >= 100) {
       await sendEphemeral(ctx, first100Message);
     }
