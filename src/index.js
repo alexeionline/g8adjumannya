@@ -60,10 +60,10 @@ bot.telegram
     console.error('Failed to set bot commands:', error);
   });
 
-const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
+const { sendEphemeral, scheduleDeleteMessage, sendTyping } = createDeletionHelpers(bot, 30_000);
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const TEN_SECONDS_MS = 10 * 1000;
-const sendAddReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
+const sendAddReply = (ctx, text, extra) => sendTyping(ctx, text, extra, TEN_MINUTES_MS, 60);
 const sendStatusReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const sendRecordReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const { parseAdd, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
@@ -75,7 +75,8 @@ const handleAdd = createAddHandler({
   hasUserReached100,
   formatDisplayName,
   formatAddHeader,
-  sendEphemeral: sendAddReply,
+  sendEphemeral,
+  sendTyping: sendAddReply,
   first100Message: FIRST_100_MESSAGE,
 });
 const handleRecord = createRecordHandler({
