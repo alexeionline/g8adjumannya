@@ -12,10 +12,8 @@ const {
   getRecordsByChat,
   getStatusByDate,
   hasUserReached100,
-  getSharedChatIds,
   initDb,
   removeSharedChat,
-  syncTodayCounts,
   updateRecord,
   upsertUser,
 } = require('./db');
@@ -102,11 +100,8 @@ const handleForce = createForceHandler({
   sendEphemeral,
 });
 const handleShare = createShareHandler({
-  dayjs,
   upsertUser,
   addSharedChat,
-  getSharedChatIds,
-  syncTodayCounts,
   sendEphemeral,
 });
 const handleHide = createHideHandler({
