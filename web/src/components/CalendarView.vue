@@ -15,13 +15,13 @@ defineProps({
       <button type="button" class="icon" @click="onNext">&rsaquo;</button>
     </div>
     <div class="calendar-grid">
-      <div class="weekday">M</div>
-      <div class="weekday">T</div>
-      <div class="weekday">W</div>
-      <div class="weekday">T</div>
-      <div class="weekday">F</div>
-      <div class="weekday">S</div>
-      <div class="weekday">S</div>
+      <div class="weekday">Пн</div>
+      <div class="weekday">Вт</div>
+      <div class="weekday">Ср</div>
+      <div class="weekday">Чт</div>
+      <div class="weekday">Пт</div>
+      <div class="weekday">Сб</div>
+      <div class="weekday">Вс</div>
 
       <div v-for="day in days" :key="day.key" :class="['day', day.tone]">
         <template v-if="day.value">

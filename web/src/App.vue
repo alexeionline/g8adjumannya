@@ -72,8 +72,8 @@ const leaderboard = computed(() =>
 )
 
 const monthLabel = computed(() => {
-  const monthName = monthCursor.value.toLocaleString('en-US', { month: 'long' })
-  return monthName
+  const monthName = monthCursor.value.toLocaleString('ru-RU', { month: 'long' })
+  return monthName.charAt(0).toUpperCase() + monthName.slice(1)
 })
 
 const calendarDays = computed(() => {
