@@ -33,6 +33,14 @@ async function initDb() {
         FOREIGN KEY (user_id) REFERENCES users (user_id)
       );
 
+      CREATE TABLE IF NOT EXISTS shared_chats (
+        chat_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (chat_id, user_id),
+        FOREIGN KEY (user_id) REFERENCES users (user_id)
+      );
+
       CREATE TABLE IF NOT EXISTS records (
         chat_id BIGINT NOT NULL,
         user_id BIGINT NOT NULL,
@@ -60,6 +68,11 @@ async function initDb() {
     await pool.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_chat_id_idx
       ON api_tokens (chat_id);
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS shared_chats_user_id_idx
+      ON shared_chats (user_id);
     `);
 
     await pool.query(`
@@ -175,47 +188,116 @@ async function upsertUser(from) {
 
 async function addCount({ chatId, userId, date, delta }) {
   const now = new Date().toISOString();
-  const result = await pool.query(
-    `
-      INSERT INTO daily_counts (chat_id, user_id, date, count, updated_at)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT(chat_id, user_id, date) DO UPDATE SET
-        count = daily_counts.count + excluded.count,
-        updated_at = excluded.updated_at
-      RETURNING count
-    `,
-    [chatId, userId, date, delta, now]
-  );
+  let total = 0;
+  const sharedChatIds = await getSharedChatIds(userId);
+  const shouldShare = sharedChatIds.some((id) => String(id) === String(chatId));
 
-  return result.rows[0] ? result.rows[0].count : 0;
+  await pool.query('BEGIN');
+  try {
+    const result = await pool.query(
+      `
+        INSERT INTO daily_counts (chat_id, user_id, date, count, updated_at)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT(chat_id, user_id, date) DO UPDATE SET
+          count = daily_counts.count + excluded.count,
+          updated_at = excluded.updated_at
+        RETURNING count
+      `,
+      [chatId, userId, date, delta, now]
+    );
+    total = result.rows[0] ? result.rows[0].count : 0;
+
+    if (shouldShare) {
+      const otherChatIds = sharedChatIds.filter((id) => String(id) !== String(chatId));
+      for (const targetChatId of otherChatIds) {
+        await pool.query(
+          `
+            INSERT INTO daily_counts (chat_id, user_id, date, count, updated_at)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT(chat_id, user_id, date) DO UPDATE SET
+              count = daily_counts.count + excluded.count,
+              updated_at = excluded.updated_at
+          `,
+          [targetChatId, userId, date, delta, now]
+        );
+      }
+    }
+
+    await pool.query('COMMIT');
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    throw error;
+  }
+
+  return total;
 }
 
 async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
-  await pool.query(
-    `
-      INSERT INTO records (
-        chat_id,
-        user_id,
-        max_add,
-        record_count,
-        record_date,
-        max_add_initialized,
-        updated_at
-      )
-      VALUES ($1, $2, $3, $3, $4, TRUE, $5)
-      ON CONFLICT(chat_id, user_id) DO UPDATE SET
-        max_add = GREATEST(records.max_add, excluded.max_add),
-        record_count = GREATEST(records.record_count, excluded.record_count),
-        record_date = CASE
-          WHEN excluded.max_add > records.max_add THEN excluded.record_date
-          ELSE records.record_date
-        END,
-        max_add_initialized = TRUE,
-        updated_at = excluded.updated_at
-    `,
-    [chatId, userId, count, date, now]
-  );
+  const sharedChatIds = await getSharedChatIds(userId);
+  const shouldShare = sharedChatIds.some((id) => String(id) === String(chatId));
+  await pool.query('BEGIN');
+  try {
+    await pool.query(
+      `
+        INSERT INTO records (
+          chat_id,
+          user_id,
+          max_add,
+          record_count,
+          record_date,
+          max_add_initialized,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $3, $4, TRUE, $5)
+        ON CONFLICT(chat_id, user_id) DO UPDATE SET
+          max_add = GREATEST(records.max_add, excluded.max_add),
+          record_count = GREATEST(records.record_count, excluded.record_count),
+          record_date = CASE
+            WHEN excluded.max_add > records.max_add THEN excluded.record_date
+            ELSE records.record_date
+          END,
+          max_add_initialized = TRUE,
+          updated_at = excluded.updated_at
+      `,
+      [chatId, userId, count, date, now]
+    );
+
+    if (shouldShare) {
+      const otherChatIds = sharedChatIds.filter((id) => String(id) !== String(chatId));
+      for (const targetChatId of otherChatIds) {
+        await pool.query(
+          `
+            INSERT INTO records (
+              chat_id,
+              user_id,
+              max_add,
+              record_count,
+              record_date,
+              max_add_initialized,
+              updated_at
+            )
+            VALUES ($1, $2, $3, $3, $4, TRUE, $5)
+            ON CONFLICT(chat_id, user_id) DO UPDATE SET
+              max_add = GREATEST(records.max_add, excluded.max_add),
+              record_count = GREATEST(records.record_count, excluded.record_count),
+              record_date = CASE
+                WHEN excluded.max_add > records.max_add THEN excluded.record_date
+                ELSE records.record_date
+              END,
+              max_add_initialized = TRUE,
+              updated_at = excluded.updated_at
+          `,
+          [targetChatId, userId, count, date, now]
+        );
+      }
+    }
+
+    await pool.query('COMMIT');
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    throw error;
+  }
 }
 
 async function getStatusByDate(chatId, date) {
@@ -268,6 +350,86 @@ async function hasUserReached100(chatId, userId) {
   );
 
   return result.rowCount > 0;
+}
+
+async function addSharedChat(chatId, userId) {
+  const now = new Date().toISOString();
+  await pool.query(
+    `
+      INSERT INTO shared_chats (chat_id, user_id, created_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (chat_id, user_id) DO NOTHING
+    `,
+    [chatId, userId, now]
+  );
+}
+
+async function removeSharedChat(chatId, userId) {
+  await pool.query(
+    `
+      DELETE FROM shared_chats
+      WHERE chat_id = $1 AND user_id = $2
+    `,
+    [chatId, userId]
+  );
+}
+
+async function getSharedChatIds(userId) {
+  const result = await pool.query(
+    `
+      SELECT chat_id
+      FROM shared_chats
+      WHERE user_id = $1
+    `,
+    [userId]
+  );
+
+  return result.rows.map((row) => row.chat_id);
+}
+
+async function syncTodayCounts(chatIds, userId, date) {
+  if (!chatIds.length) {
+    return 0;
+  }
+
+  const totalResult = await pool.query(
+    `
+      SELECT COALESCE(SUM(count), 0) AS total
+      FROM daily_counts
+      WHERE user_id = $1
+        AND chat_id = ANY($2)
+        AND date = $3
+    `,
+    [userId, chatIds, date]
+  );
+
+  const total = Number(totalResult.rows[0]?.total || 0);
+  if (!total) {
+    return 0;
+  }
+
+  const now = new Date().toISOString();
+  await pool.query('BEGIN');
+  try {
+    for (const chatId of chatIds) {
+      await pool.query(
+        `
+          INSERT INTO daily_counts (chat_id, user_id, date, count, updated_at)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT(chat_id, user_id, date) DO UPDATE SET
+            count = excluded.count,
+            updated_at = excluded.updated_at
+        `,
+        [chatId, userId, date, total, now]
+      );
+    }
+    await pool.query('COMMIT');
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    throw error;
+  }
+
+  return total;
 }
 
 async function getUserById(userId) {
@@ -380,6 +542,10 @@ module.exports = {
   getStatusByDate,
   getUserHistory,
   hasUserReached100,
+  addSharedChat,
+  removeSharedChat,
+  getSharedChatIds,
+  syncTodayCounts,
   getUserById,
   getRecordsByChat,
   getChatRecord,

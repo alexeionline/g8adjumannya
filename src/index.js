@@ -6,12 +6,16 @@ const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
   addCount,
+  addSharedChat,
   createApiToken,
   getApiTokenByChat,
   getRecordsByChat,
   getStatusByDate,
   hasUserReached100,
+  getSharedChatIds,
   initDb,
+  removeSharedChat,
+  syncTodayCounts,
   updateRecord,
   upsertUser,
 } = require('./db');
@@ -19,6 +23,8 @@ const { createAddHandler } = require('./handlers/add');
 const { createApiTokenHandler } = require('./handlers/apiToken');
 const { createRecordHandler } = require('./handlers/record');
 const { createForceHandler } = require('./handlers/force');
+const { createShareHandler } = require('./handlers/share');
+const { createHideHandler } = require('./handlers/hide');
 const { createStatusHandler } = require('./handlers/status');
 const { createDeletionHelpers } = require('./utils/deletionQueue');
 const {
@@ -47,6 +53,8 @@ bot.telegram
     { command: 'force', description: 'Замотивировать участника' },
     { command: 'record', description: 'Показать рекорды чата' },
     { command: 'web', description: 'Открыть веб‑приложение' },
+    { command: 'share', description: 'Связать результаты между чатами' },
+    { command: 'hide', description: 'Скрыть результаты в этом чате' },
     { command: 'status', description: 'Показать статус за дату' },
   ])
   .catch((error) => {
@@ -91,6 +99,18 @@ const handleStatus = createStatusHandler({
 const handleForce = createForceHandler({
   forceMessages: FORCE_MESSAGES,
   errors: ERRORS,
+  sendEphemeral,
+});
+const handleShare = createShareHandler({
+  dayjs,
+  upsertUser,
+  addSharedChat,
+  getSharedChatIds,
+  syncTodayCounts,
+  sendEphemeral,
+});
+const handleHide = createHideHandler({
+  removeSharedChat,
   sendEphemeral,
 });
 const handleApiToken = createApiTokenHandler({
@@ -161,6 +181,14 @@ bot.command('record', async (ctx) => {
 
 bot.command('force', async (ctx) => {
   return handleForce(ctx);
+});
+
+bot.command('share', async (ctx) => {
+  return handleShare(ctx);
+});
+
+bot.command('hide', async (ctx) => {
+  return handleHide(ctx);
 });
 
 bot.command('web', async (ctx) => {
