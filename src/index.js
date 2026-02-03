@@ -63,7 +63,7 @@ bot.telegram
 const { sendEphemeral, scheduleDeleteMessage, sendTyping } = createDeletionHelpers(bot, 30_000);
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const TEN_SECONDS_MS = 10 * 1000;
-const sendAddReply = (ctx, text, extra) => sendTyping(ctx, text, extra, TEN_MINUTES_MS, 60);
+const sendAddReply = (ctx, text, extra) => sendTyping(ctx, text, extra, TEN_MINUTES_MS, 1000);
 const sendStatusReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const sendRecordReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const { parseAdd, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);

@@ -55,30 +55,32 @@ function createDeletionHelpers(bot, delayMs = 30_000) {
     });
   }
 
-  async function sendTyping(ctx, text, extra, overrideDelayMs, intervalMs = 60, caret = '|') {
+  async function sendTyping(ctx, text, extra, overrideDelayMs, intervalMs = 1000, caret = '|') {
     const content = typeof text === 'string' ? text : '';
     if (!content) {
       return sendEphemeral(ctx, '', extra, overrideDelayMs);
     }
 
-    const initialText = `${content.slice(0, 1)}${caret}`;
-    const message = await ctx.reply(initialText, extra);
+    const words = content.split(/\s+/).filter(Boolean);
+    const initialWord = words[0] || '';
+    const message = await ctx.reply(`${initialWord}${caret}`, extra);
     if (!message || !message.chat || !message.message_id) {
       return message;
     }
 
     enqueueDeletion(message.chat.id, message.message_id, overrideDelayMs);
 
-    for (let i = 1; i < content.length; i += 1) {
+    for (let i = 1; i < words.length; i += 1) {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
-      const nextText = `${content.slice(0, i + 1)}${caret}`;
+      const nextText = `${words.slice(0, i + 1).join(' ')}${caret}`;
       await ctx.telegram
         .editMessageText(message.chat.id, message.message_id, undefined, nextText, extra)
         .catch(() => {});
     }
 
+    const finalText = `${content}...`;
     await ctx.telegram
-      .editMessageText(message.chat.id, message.message_id, undefined, content, extra)
+      .editMessageText(message.chat.id, message.message_id, undefined, finalText, extra)
       .catch(() => {});
 
     return message;
