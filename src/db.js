@@ -264,10 +264,8 @@ async function getStatusByDate(chatId, date) {
         u.first_name,
         u.last_name
       FROM daily_counts dc
-      JOIN shared_chats sc ON sc.user_id = dc.user_id
       LEFT JOIN users u ON u.user_id = dc.user_id
-      WHERE sc.user_id = ANY($1)
-        AND dc.chat_id = sc.chat_id
+      WHERE dc.user_id = ANY($1)
         AND dc.date = $2
       GROUP BY dc.user_id, u.username, u.first_name, u.last_name
     `,
@@ -327,7 +325,6 @@ async function getUserHistory(chatId, userId) {
         SUM(dc.count) AS count
       FROM daily_counts dc
       WHERE dc.user_id = $1
-        AND dc.chat_id IN (SELECT chat_id FROM shared_chats WHERE user_id = $1)
       GROUP BY dc.date
       ORDER BY dc.date ASC
     `,
@@ -360,7 +357,6 @@ async function hasUserReached100(chatId, userId) {
       SELECT 1
       FROM daily_counts
       WHERE user_id = $1
-        AND chat_id IN (SELECT chat_id FROM shared_chats WHERE user_id = $1)
         AND count >= 100
       LIMIT 1
     `,
@@ -507,10 +503,8 @@ async function getRecordsByChat(chatId) {
         u.first_name,
         u.last_name
       FROM records r
-      JOIN shared_chats sc ON sc.user_id = r.user_id
       LEFT JOIN users u ON u.user_id = r.user_id
-      WHERE sc.user_id = ANY($1)
-        AND r.chat_id = sc.chat_id
+      WHERE r.user_id = ANY($1)
       ORDER BY r.user_id, r.record_count DESC, r.record_date ASC
     `,
     [sharedUsers]
