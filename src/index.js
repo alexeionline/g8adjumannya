@@ -11,7 +11,7 @@ const {
   getApiTokenByChat,
   getRecordsByChatV2,
   getSharedUserIdsByChat,
-  getStatusByDate,
+  getStatusByDateV2,
   getTotalCountForUserDate,
   hasUserReached100,
   initDb,
@@ -95,7 +95,8 @@ const handleRecord = createRecordHandler({
 });
 const handleStatus = createStatusHandler({
   dayjs,
-  getStatusByDate,
+  getSharedUserIdsByChat,
+  getStatusByDateV2,
   formatDisplayName,
   formatProgressBar,
   formatIndexEmoji,

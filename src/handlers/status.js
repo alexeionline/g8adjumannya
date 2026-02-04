@@ -1,6 +1,7 @@
 function createStatusHandler({
   dayjs,
-  getStatusByDate,
+  getSharedUserIdsByChat,
+  getStatusByDateV2,
   formatDisplayName,
   formatProgressBar,
   formatIndexEmoji,
@@ -12,7 +13,9 @@ function createStatusHandler({
       return sendEphemeral(ctx, parsed.error);
     }
 
-    const rows = await getStatusByDate(ctx.chat.id, parsed.date);
+    const chatUserIds = await getSharedUserIdsByChat(ctx.chat.id);
+    const statusRows = await getStatusByDateV2(chatUserIds, parsed.date);
+    const rows = statusRows.map((r) => ({ ...r, count: r.total }));
     if (!rows.length) {
       return sendEphemeral(ctx, errors.NO_RESULTS(parsed.label));
     }

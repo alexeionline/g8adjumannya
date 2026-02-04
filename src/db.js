@@ -963,7 +963,7 @@ async function getRecordsByChatV2(chatUserIds) {
       FROM best_day bd
       LEFT JOIN best_approach ba ON ba.user_id = bd.user_id
       LEFT JOIN users u ON u.user_id = bd.user_id
-      ORDER BY bd.best_day_total DESC, ba.best_approach DESC NULLS LAST, bd.user_id ASC
+      ORDER BY COALESCE(ba.best_approach, 0) DESC, bd.best_day_total DESC, bd.user_id ASC
     `,
     [chatUserIds]
   );
