@@ -28,13 +28,37 @@ function buildDemoHistory() {
 }
 
 let demoApproachId = 9000
+/** Сегодня 09:00 + minutes минут (для демо-интервалов) */
+function demoCreatedAt(minutes) {
+  const d = new Date()
+  d.setHours(9, minutes, 0, 0)
+  return d.toISOString()
+}
+
 function buildDemoStatusRows() {
   demoApproachId = 9000
+  const alexApproaches = [
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(0) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(5) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(12) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(22) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(35) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(50) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(68) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(88) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(108) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(128) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(148) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(170) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(195) },
+    { id: ++demoApproachId, count: 8, created_at: demoCreatedAt(220) },
+    { id: ++demoApproachId, count: 6, created_at: demoCreatedAt(248) },
+  ]
   return [
-    { user_id: 1001, username: 'alex', first_name: 'Alex', last_name: null, count: 110, approaches: [{ id: ++demoApproachId, count: 20 }, { id: ++demoApproachId, count: 30 }, { id: ++demoApproachId, count: 30 }, { id: ++demoApproachId, count: 30 }] },
-    { user_id: 1002, username: 'maria', first_name: 'Maria', last_name: null, count: 90, approaches: [{ id: ++demoApproachId, count: 15 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }] },
-    { user_id: 1003, username: 'denis', first_name: 'Denis', last_name: null, count: 100, approaches: [{ id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }] },
-    { user_id: 1004, username: 'irina', first_name: 'Irina', last_name: null, count: 30, approaches: [{ id: ++demoApproachId, count: 10 }, { id: ++demoApproachId, count: 10 }, { id: ++demoApproachId, count: 10 }] },
+    { user_id: 1001, username: 'alex', first_name: 'Alex', last_name: null, count: 118, approaches: alexApproaches },
+    { user_id: 1002, username: 'maria', first_name: 'Maria', last_name: null, count: 90, approaches: [{ id: ++demoApproachId, count: 15, created_at: demoCreatedAt(5) }, { id: ++demoApproachId, count: 25, created_at: demoCreatedAt(20) }, { id: ++demoApproachId, count: 25, created_at: demoCreatedAt(35) }, { id: ++demoApproachId, count: 25, created_at: demoCreatedAt(95) }] },
+    { user_id: 1003, username: 'denis', first_name: 'Denis', last_name: null, count: 100, approaches: [{ id: ++demoApproachId, count: 25, created_at: demoCreatedAt(0) }, { id: ++demoApproachId, count: 25, created_at: demoCreatedAt(30) }, { id: ++demoApproachId, count: 25, created_at: demoCreatedAt(60) }, { id: ++demoApproachId, count: 25, created_at: demoCreatedAt(90) }] },
+    { user_id: 1004, username: 'irina', first_name: 'Irina', last_name: null, count: 30, approaches: [{ id: ++demoApproachId, count: 10, created_at: demoCreatedAt(0) }, { id: ++demoApproachId, count: 10, created_at: demoCreatedAt(15) }, { id: ++demoApproachId, count: 10, created_at: demoCreatedAt(30) }] },
   ]
 }
 
@@ -145,11 +169,15 @@ export const useDataStore = defineStore('data', {
             statusRow.count = Number(statusRow.count || 0) + delta
             if (!Array.isArray(statusRow.approaches)) statusRow.approaches = []
             const nextId = Math.max(9000, ...this.statusRows.flatMap((r) => (r.approaches || []).map((a) => (a && typeof a === 'object' && 'id' in a ? a.id : 0)))) + 1
-            statusRow.approaches.push({ id: nextId, count: delta })
+            statusRow.approaches.push({ id: nextId, count: delta, created_at: new Date().toISOString() })
           } else {
             const fallback = DEMO_USERS.find((row) => row.user_id === userId) || { user_id: userId }
             const nextId = Math.max(9000, ...this.statusRows.flatMap((r) => (r.approaches || []).map((a) => (a && typeof a === 'object' && 'id' in a ? a.id : 0)))) + 1
-            this.statusRows.push({ ...fallback, count: delta, approaches: [{ id: nextId, count: delta }] })
+            this.statusRows.push({
+              ...fallback,
+              count: delta,
+              approaches: [{ id: nextId, count: delta, created_at: new Date().toISOString() }],
+            })
           }
           this.statusRows = this.statusRows.slice().sort((a, b) => b.count - a.count)
 

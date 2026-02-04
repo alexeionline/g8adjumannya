@@ -59,6 +59,22 @@ function approachCount(approach) {
 function approachId(approach) {
   return typeof approach === 'object' && approach != null && 'id' in approach ? approach.id : null
 }
+
+/** Интервал между подходами в формате h:mm */
+function formatElapsed(createdAtPrev, createdAtCur) {
+  if (!createdAtPrev || !createdAtCur) return null
+  const prev = new Date(createdAtPrev).getTime()
+  const cur = new Date(createdAtCur).getTime()
+  if (Number.isNaN(prev) || Number.isNaN(cur) || cur < prev) return null
+  const totalMinutes = Math.floor((cur - prev) / 60_000)
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  return `${h}:${String(m).padStart(2, '0')}`
+}
+
+function approachCreatedAt(approach) {
+  return typeof approach === 'object' && approach != null && 'created_at' in approach ? approach.created_at : null
+}
 </script>
 
 <template>
@@ -82,6 +98,11 @@ function approachId(approach) {
           <div class="today-username">{{ item.label }}</div>
           <div class="today-approaches">
             <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
+              <span
+                v-if="i > 0 && formatElapsed(approachCreatedAt(item.approaches[i - 1]), approachCreatedAt(approach))"
+                class="today-approach-elapsed"
+                :title="`${formatElapsed(approachCreatedAt(item.approaches[i - 1]), approachCreatedAt(approach))} между подходами`"
+              >{{ formatElapsed(approachCreatedAt(item.approaches[i - 1]), approachCreatedAt(approach)) }}</span>
               <div v-if="isEditing(item.key, i)" class="today-approach-edit">
                 <input
                   v-model="editInput"
@@ -209,6 +230,15 @@ function approachId(approach) {
   gap: 4px;
   justify-content: center;
   align-items: center;
+}
+
+.today-approach-elapsed {
+  font-size: 9px;
+  font-weight: 400;
+  color: #9ca3af;
+  padding: 0 2px;
+  min-width: 28px;
+  text-align: center;
 }
 
 .today-approach-square {
