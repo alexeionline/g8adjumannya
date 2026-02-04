@@ -50,11 +50,15 @@ onMounted(async () => {
 })
 
 const todayResults = computed(() =>
-  (data.statusRows || []).map((row) => ({
-    key: row.user_id,
-    label: row.username || row.first_name || row.user_id,
-    value: row.count,
-  }))
+  (data.statusRows || []).map((row) => {
+    const approaches = Array.isArray(row.approaches) ? row.approaches : []
+    return {
+      key: row.user_id,
+      label: row.username || row.first_name || row.user_id,
+      value: row.count,
+      approaches: approaches.length > 0 ? approaches : (row.count > 0 ? [row.count] : []),
+    }
+  })
 )
 
 const leaderboard = computed(() =>

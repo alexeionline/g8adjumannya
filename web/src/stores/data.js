@@ -29,10 +29,10 @@ function buildDemoHistory() {
 
 function buildDemoStatusRows() {
   return [
-    { user_id: 1001, username: 'alex', first_name: 'Alex', last_name: null, count: 110 },
-    { user_id: 1002, username: 'maria', first_name: 'Maria', last_name: null, count: 90 },
-    { user_id: 1003, username: 'denis', first_name: 'Denis', last_name: null, count: 100 },
-    { user_id: 1004, username: 'irina', first_name: 'Irina', last_name: null, count: 30 },
+    { user_id: 1001, username: 'alex', first_name: 'Alex', last_name: null, count: 110, approaches: [20, 30, 30, 30] },
+    { user_id: 1002, username: 'maria', first_name: 'Maria', last_name: null, count: 90, approaches: [15, 25, 25, 25] },
+    { user_id: 1003, username: 'denis', first_name: 'Denis', last_name: null, count: 100, approaches: [25, 25, 25, 25] },
+    { user_id: 1004, username: 'irina', first_name: 'Irina', last_name: null, count: 30, approaches: [10, 10, 10] },
   ]
 }
 
@@ -141,9 +141,11 @@ export const useDataStore = defineStore('data', {
           const statusRow = this.statusRows.find((row) => row.user_id === userId);
           if (statusRow) {
             statusRow.count = Number(statusRow.count || 0) + delta
+            if (!Array.isArray(statusRow.approaches)) statusRow.approaches = []
+            statusRow.approaches.push(delta)
           } else {
             const fallback = DEMO_USERS.find((row) => row.user_id === userId) || { user_id: userId }
-            this.statusRows.push({ ...fallback, count: delta })
+            this.statusRows.push({ ...fallback, count: delta, approaches: [delta] })
           }
           this.statusRows = this.statusRows.slice().sort((a, b) => b.count - a.count)
 
