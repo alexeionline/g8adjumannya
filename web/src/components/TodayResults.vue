@@ -1,18 +1,63 @@
 <script setup>
-defineProps({
+import { ref } from 'vue'
+
+const props = defineProps({
   items: { type: Array, default: () => [] },
   userInput: { type: String, default: '' },
   onSubmit: { type: Function, required: true },
+  onRefresh: { type: Function, default: null },
+  onUpdateApproach: { type: Function, default: null },
+  onDeleteApproach: { type: Function, default: null },
 })
 
 const emit = defineEmits(['update:userInput'])
 
 const GOAL = 100
+const editing = ref(null)
+const editInput = ref('')
 
 function fillHeight(value) {
   const numeric = Number(value) || 0
   const percent = Math.max(0, Math.min(100, (numeric / GOAL) * 100))
   return `${percent}%`
+}
+
+function isEditing(itemKey, index) {
+  return editing.value && editing.value.itemKey === itemKey && editing.value.index === index
+}
+
+function startEdit(itemKey, index, approach) {
+  if (approach.id == null) return
+  editing.value = { itemKey, index, id: approach.id, count: approach.count }
+  editInput.value = String(approach.count)
+}
+
+function closeEdit() {
+  editing.value = null
+  editInput.value = ''
+}
+
+async function saveEdit() {
+  if (!editing.value || !props.onUpdateApproach) return
+  const count = Math.max(1, Math.min(1000, Number(editInput.value) || 0))
+  await props.onUpdateApproach(editing.value.id, editing.value.itemKey, count)
+  if (props.onRefresh) await props.onRefresh()
+  closeEdit()
+}
+
+async function removeApproach() {
+  if (!editing.value || !props.onDeleteApproach) return
+  await props.onDeleteApproach(editing.value.id, editing.value.itemKey)
+  if (props.onRefresh) await props.onRefresh()
+  closeEdit()
+}
+
+function approachCount(approach) {
+  return typeof approach === 'object' && approach != null && 'count' in approach ? approach.count : Number(approach) || 0
+}
+
+function approachId(approach) {
+  return typeof approach === 'object' && approach != null && 'id' in approach ? approach.id : null
 }
 </script>
 
@@ -36,12 +81,32 @@ function fillHeight(value) {
         <div class="today-right">
           <div class="today-username">{{ item.label }}</div>
           <div class="today-approaches">
-            <span
-              v-for="(cnt, i) in item.approaches"
-              :key="i"
-              class="today-approach-square"
-              :title="`${cnt}`"
-            >{{ cnt }}</span>
+            <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
+              <div v-if="isEditing(item.key, i)" class="today-approach-edit">
+                <input
+                  v-model="editInput"
+                  type="number"
+                  min="1"
+                  max="1000"
+                  class="today-approach-input"
+                  @keydown.enter="saveEdit"
+                  @keydown.escape="closeEdit"
+                />
+                <button type="button" class="today-approach-btn today-approach-btn-save" title="Сохранить" @click="saveEdit">💾</button>
+                <button type="button" class="today-approach-btn today-approach-btn-close" title="Закрыть" @click="closeEdit">✕</button>
+                <button type="button" class="today-approach-btn today-approach-btn-delete" title="Удалить" @click="removeApproach">🗑</button>
+              </div>
+              <button
+                v-else
+                type="button"
+                class="today-approach-square today-approach-clickable"
+                :class="{ 'today-approach-no-edit': approachId(approach) == null }"
+                :title="approachId(approach) != null ? 'Нажмите для редактирования' : String(approachCount(approach))"
+                @click="startEdit(item.key, i, { id: approachId(approach), count: approachCount(approach) })"
+              >
+                {{ approachCount(approach) }}
+              </button>
+            </template>
           </div>
         </div>
       </li>
@@ -161,6 +226,17 @@ function fillHeight(value) {
   border: 1px solid #d1d5db;
 }
 
+.today-approach-clickable {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.today-approach-clickable:hover {
+  opacity: 0.9;
+}
+.today-approach-no-edit {
+  cursor: default;
+}
+
 .result-done .today-approach-square {
   background: #dcfce7;
   border-color: #86efac;
@@ -171,6 +247,52 @@ function fillHeight(value) {
   background: #fffbeb;
   border-color: #fde68a;
   color: #92400e;
+}
+
+.today-approach-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.today-approach-input {
+  width: 48px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.today-approach-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.today-approach-btn:hover {
+  background: #f3f4f6;
+}
+.today-approach-btn-save {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+.today-approach-btn-save:hover {
+  background: #bbf7d0;
+}
+.today-approach-btn-delete:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
 .input-row {

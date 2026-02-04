@@ -42,3 +42,22 @@ export async function addPushups(auth, userId, delta) {
   })
   return data
 }
+
+export async function updateApproach(auth, approachId, userId, count) {
+  requireAuth(auth)
+  const client = createApiClient(auth)
+  const { data } = await client.patch(`/approaches/${approachId}`, {
+    user_id: userId,
+    count,
+  })
+  return data
+}
+
+export async function deleteApproach(auth, approachId, userId) {
+  requireAuth(auth)
+  const client = createApiClient(auth)
+  const { data } = await client.delete(`/approaches/${approachId}`, {
+    data: { user_id: userId },
+  })
+  return data
+}

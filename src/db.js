@@ -847,8 +847,8 @@ async function deleteApproach(id, userId) {
 }
 
 /**
- * Возвращает для каждого user_id из списка массив count подходов за дату (порядок по created_at).
- * @returns {Promise<Array<{ user_id: number, approaches: number[] }>>}
+ * Возвращает для каждого user_id из списка массив подходов { id, count } за дату (порядок по created_at).
+ * @returns {Promise<Array<{ user_id: number, approaches: Array<{ id: number, count: number }> }>>}
  */
 async function getApproachesCountsByChatAndDate(chatUserIds, date) {
   if (!chatUserIds.length) {
@@ -856,19 +856,26 @@ async function getApproachesCountsByChatAndDate(chatUserIds, date) {
   }
   const result = await pool.query(
     `
-      SELECT user_id, array_agg(count ORDER BY created_at ASC) AS approaches
+      SELECT user_id, id, count, created_at
       FROM daily_adds
       WHERE user_id = ANY($1::bigint[]) AND date = $2
-      GROUP BY user_id
+      ORDER BY user_id, created_at ASC
     `,
     [chatUserIds, date]
   );
-  const normalize = (arr) => {
-    if (Array.isArray(arr)) return arr.map(Number);
-    if (typeof arr === 'string') return arr.replace(/[{}]/g, '').split(',').map(Number).filter(Number.isFinite);
-    return [];
-  };
-  const byUser = Object.fromEntries(result.rows.map((r) => [Number(r.user_id), normalize(r.approaches)]));
+  const byUser = {};
+  for (const uid of chatUserIds) {
+    byUser[uid] = [];
+  }
+  for (const row of result.rows) {
+    const uid = Number(row.user_id);
+    if (byUser[uid]) {
+      byUser[uid].push({
+        id: Number(row.id),
+        count: Number(row.count) || 0,
+      });
+    }
+  }
   return chatUserIds.map((uid) => ({ user_id: uid, approaches: byUser[uid] || [] }));
 }
 

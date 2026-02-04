@@ -49,17 +49,35 @@ onMounted(async () => {
   }
 })
 
+const todayDateKey = computed(() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+})
+
 const todayResults = computed(() =>
   (data.statusRows || []).map((row) => {
-    const approaches = Array.isArray(row.approaches) ? row.approaches : []
+    const raw = Array.isArray(row.approaches) ? row.approaches : []
+    const approaches = raw.map((a) => (typeof a === 'object' && a != null && 'id' in a ? { id: a.id, count: Number(a.count) || 0 } : { id: null, count: Number(a) || 0 }))
     return {
       key: row.user_id,
       label: row.username || row.first_name || row.user_id,
       value: row.count,
-      approaches: approaches.length > 0 ? approaches : (row.count > 0 ? [row.count] : []),
+      approaches: approaches.length > 0 ? approaches : (row.count > 0 ? [{ id: null, count: row.count }] : []),
     }
   })
 )
+
+async function refreshToday() {
+  await data.loadStatus(auth, todayDateKey.value)
+}
+
+async function handleUpdateApproach(approachId, userId, count) {
+  await data.updateApproach(auth, approachId, userId, count, todayDateKey.value)
+}
+
+async function handleDeleteApproach(approachId, userId) {
+  await data.deleteApproach(auth, approachId, userId, todayDateKey.value)
+}
 
 const leaderboard = computed(() =>
   (data.recordsRows || []).map((row, index) => {
@@ -174,6 +192,9 @@ function moveMonth(direction) {
         :user-input="addCountInput"
         @update:userInput="addCountInput = $event"
         :on-submit="submitAdd"
+        :on-refresh="refreshToday"
+        :on-update-approach="handleUpdateApproach"
+        :on-delete-approach="handleDeleteApproach"
       />
 
       <Leaderboard :items="leaderboard" />

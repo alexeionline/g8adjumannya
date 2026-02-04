@@ -209,25 +209,74 @@ function createApiApp() {
   });
 
   app.get('/status', authMiddleware, async (req, res) => {
-    const date = req.query.date
-      ? dayjs(req.query.date, 'YYYY-MM-DD', true)
-      : dayjs();
-    if (!date.isValid()) {
-      return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    try {
+      const date = req.query.date
+        ? dayjs(req.query.date, 'YYYY-MM-DD', true)
+        : dayjs();
+      if (!date.isValid()) {
+        return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+      }
+      const dateStr = date.format('YYYY-MM-DD');
+      const chatUserIds = await getSharedUserIdsByChat(req.chatId);
+      const statusRows = await getStatusByDateV2(chatUserIds, dateStr);
+      const approachesByUser = await getApproachesCountsByChatAndDate(chatUserIds, dateStr);
+      const approachesMap = Object.fromEntries(approachesByUser.map((a) => [a.user_id, a.approaches]));
+      const rows = statusRows.map((r) => ({
+        user_id: r.user_id,
+        username: r.username ?? null,
+        first_name: null,
+        count: r.total,
+        approaches: approachesMap[r.user_id] || [],
+      }));
+      return res.json({ date: dateStr, rows });
+    } catch (err) {
+      console.error('GET /status error:', err);
+      return res.status(500).json({ error: 'Failed to load status' });
     }
-    const dateStr = date.format('YYYY-MM-DD');
+  });
+
+  app.patch('/approaches/:id', authMiddleware, async (req, res) => {
+    const id = Number(req.params.id);
+    const userId = Number(req.body?.user_id);
+    const count = Number(req.body?.count);
+    if (!Number.isFinite(id) || !Number.isFinite(userId)) {
+      return res.status(400).json({ error: 'id and user_id required' });
+    }
+    if (!Number.isFinite(count) || count < 1 || count > 1000) {
+      return res.status(400).json({ error: 'count must be between 1 and 1000' });
+    }
+    const approach = await getApproachById(id);
+    if (!approach) return res.status(404).json({ error: 'approach not found' });
     const chatUserIds = await getSharedUserIdsByChat(req.chatId);
-    const statusRows = await getStatusByDateV2(chatUserIds, dateStr);
-    const approachesByUser = await getApproachesCountsByChatAndDate(chatUserIds, dateStr);
-    const approachesMap = Object.fromEntries(approachesByUser.map((a) => [a.user_id, a.approaches]));
-    const rows = statusRows.map((r) => ({
-      user_id: r.user_id,
-      username: r.username ?? null,
-      first_name: null,
-      count: r.total,
-      approaches: approachesMap[r.user_id] || [],
-    }));
-    res.json({ date: dateStr, rows });
+    if (!chatUserIds.includes(approach.user_id)) {
+      return res.status(403).json({ error: 'no access to this approach' });
+    }
+    if (approach.user_id !== userId) {
+      return res.status(403).json({ error: 'user_id does not own this approach' });
+    }
+    const updated = await updateApproachCount(id, userId, count);
+    const total = await getTotalForUserDateV2(userId, updated.date);
+    return res.json({ approach: { id: updated.id, user_id: updated.user_id, date: updated.date, count: updated.count }, total });
+  });
+
+  app.delete('/approaches/:id', authMiddleware, async (req, res) => {
+    const id = Number(req.params.id);
+    const userId = Number(req.body?.user_id ?? req.query.user_id);
+    if (!Number.isFinite(id) || !Number.isFinite(userId)) {
+      return res.status(400).json({ error: 'id and user_id required' });
+    }
+    const approach = await getApproachById(id);
+    if (!approach) return res.status(404).json({ error: 'approach not found' });
+    const chatUserIds = await getSharedUserIdsByChat(req.chatId);
+    if (!chatUserIds.includes(approach.user_id)) {
+      return res.status(403).json({ error: 'no access to this approach' });
+    }
+    if (approach.user_id !== userId) {
+      return res.status(403).json({ error: 'user_id does not own this approach' });
+    }
+    await deleteApproach(id, userId);
+    const total = await getTotalForUserDateV2(userId, approach.date);
+    return res.json({ total });
   });
 
   app.get('/records', authMiddleware, async (req, res) => {

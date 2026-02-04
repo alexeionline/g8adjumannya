@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { addPushups, fetchHistory, fetchRecords, fetchStatus } from '../api'
+import { addPushups, deleteApproach as apiDeleteApproach, fetchHistory, fetchRecords, fetchStatus, updateApproach as apiUpdateApproach } from '../api'
 import { extractErrorMessage } from '../api/client'
 
 const DEMO_MODE = import.meta.env.VITE_DEMO === '1'
@@ -27,12 +27,14 @@ function buildDemoHistory() {
   return days
 }
 
+let demoApproachId = 9000
 function buildDemoStatusRows() {
+  demoApproachId = 9000
   return [
-    { user_id: 1001, username: 'alex', first_name: 'Alex', last_name: null, count: 110, approaches: [20, 30, 30, 30] },
-    { user_id: 1002, username: 'maria', first_name: 'Maria', last_name: null, count: 90, approaches: [15, 25, 25, 25] },
-    { user_id: 1003, username: 'denis', first_name: 'Denis', last_name: null, count: 100, approaches: [25, 25, 25, 25] },
-    { user_id: 1004, username: 'irina', first_name: 'Irina', last_name: null, count: 30, approaches: [10, 10, 10] },
+    { user_id: 1001, username: 'alex', first_name: 'Alex', last_name: null, count: 110, approaches: [{ id: ++demoApproachId, count: 20 }, { id: ++demoApproachId, count: 30 }, { id: ++demoApproachId, count: 30 }, { id: ++demoApproachId, count: 30 }] },
+    { user_id: 1002, username: 'maria', first_name: 'Maria', last_name: null, count: 90, approaches: [{ id: ++demoApproachId, count: 15 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }] },
+    { user_id: 1003, username: 'denis', first_name: 'Denis', last_name: null, count: 100, approaches: [{ id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }, { id: ++demoApproachId, count: 25 }] },
+    { user_id: 1004, username: 'irina', first_name: 'Irina', last_name: null, count: 30, approaches: [{ id: ++demoApproachId, count: 10 }, { id: ++demoApproachId, count: 10 }, { id: ++demoApproachId, count: 10 }] },
   ]
 }
 
@@ -142,10 +144,12 @@ export const useDataStore = defineStore('data', {
           if (statusRow) {
             statusRow.count = Number(statusRow.count || 0) + delta
             if (!Array.isArray(statusRow.approaches)) statusRow.approaches = []
-            statusRow.approaches.push(delta)
+            const nextId = Math.max(9000, ...this.statusRows.flatMap((r) => (r.approaches || []).map((a) => (a && typeof a === 'object' && 'id' in a ? a.id : 0)))) + 1
+            statusRow.approaches.push({ id: nextId, count: delta })
           } else {
             const fallback = DEMO_USERS.find((row) => row.user_id === userId) || { user_id: userId }
-            this.statusRows.push({ ...fallback, count: delta, approaches: [delta] })
+            const nextId = Math.max(9000, ...this.statusRows.flatMap((r) => (r.approaches || []).map((a) => (a && typeof a === 'object' && 'id' in a ? a.id : 0)))) + 1
+            this.statusRows.push({ ...fallback, count: delta, approaches: [{ id: nextId, count: delta }] })
           }
           this.statusRows = this.statusRows.slice().sort((a, b) => b.count - a.count)
 
@@ -172,6 +176,45 @@ export const useDataStore = defineStore('data', {
         this.error = extractErrorMessage(error)
       } finally {
         this.loading = false
+      }
+    },
+    async updateApproach(auth, approachId, userId, count, date) {
+      this.error = ''
+      try {
+        if (DEMO_MODE) {
+          const row = this.statusRows.find((r) => r.user_id === userId)
+          if (row && Array.isArray(row.approaches)) {
+            const approach = row.approaches.find((a) => a && typeof a === 'object' && a.id === approachId)
+            if (approach) {
+              approach.count = Math.max(1, Math.min(1000, Number(count) || 0))
+              row.count = row.approaches.reduce((s, a) => s + (a && typeof a === 'object' && 'count' in a ? a.count : 0), 0)
+            }
+          }
+          return
+        }
+        await apiUpdateApproach(auth, approachId, userId, count)
+        await this.loadStatus(auth, date)
+        if (userId) await this.loadHistory(auth, userId)
+      } catch (error) {
+        this.error = extractErrorMessage(error)
+      }
+    },
+    async deleteApproach(auth, approachId, userId, date) {
+      this.error = ''
+      try {
+        if (DEMO_MODE) {
+          const row = this.statusRows.find((r) => r.user_id === userId)
+          if (row && Array.isArray(row.approaches)) {
+            row.approaches = row.approaches.filter((a) => !(a && typeof a === 'object' && a.id === approachId))
+            row.count = row.approaches.reduce((s, a) => s + (a && typeof a === 'object' && 'count' in a ? a.count : 0), 0)
+          }
+          return
+        }
+        await apiDeleteApproach(auth, approachId, userId)
+        await this.loadStatus(auth, date)
+        if (userId) await this.loadHistory(auth, userId)
+      } catch (error) {
+        this.error = extractErrorMessage(error)
       }
     },
   },
