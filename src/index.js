@@ -277,9 +277,9 @@ bot.on('text', async (ctx) => {
     return handleRecord(ctx);
   }
 
-  const parsed = parseAdd(text);
-  if (parsed) {
-    return handleAdd(ctx, parsed);
+  const addParsed = parseAdd(text);
+  if (addParsed) {
+    return handleAdd(ctx, addParsed);
   }
 
   const parsed = parseStatusDate(text);
