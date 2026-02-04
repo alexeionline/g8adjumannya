@@ -73,7 +73,19 @@ function formatElapsed(createdAtPrev, createdAtCur) {
 }
 
 function approachCreatedAt(approach) {
-  return typeof approach === 'object' && approach != null && 'created_at' in approach ? approach.created_at : null
+  if (typeof approach !== 'object' || approach == null) return null
+  const v = approach.created_at
+  return v != null ? v : null
+}
+
+function elapsedText(prev, cur) {
+  const text = formatElapsed(approachCreatedAt(prev), approachCreatedAt(cur))
+  return text != null ? text : '–'
+}
+
+function elapsedTitle(prev, cur) {
+  const text = formatElapsed(approachCreatedAt(prev), approachCreatedAt(cur))
+  return text != null ? `${text} между подходами` : 'нет данных'
 }
 </script>
 
@@ -99,10 +111,10 @@ function approachCreatedAt(approach) {
           <div class="today-approaches">
             <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
               <span
-                v-if="i > 0 && formatElapsed(approachCreatedAt(item.approaches[i - 1]), approachCreatedAt(approach))"
+                v-if="i > 0"
                 class="today-approach-elapsed"
-                :title="`${formatElapsed(approachCreatedAt(item.approaches[i - 1]), approachCreatedAt(approach))} между подходами`"
-              >{{ formatElapsed(approachCreatedAt(item.approaches[i - 1]), approachCreatedAt(approach)) }}</span>
+                :title="elapsedTitle(item.approaches[i - 1], approach)"
+              >{{ elapsedText(item.approaches[i - 1], approach) }}</span>
               <div v-if="isEditing(item.key, i)" class="today-approach-edit">
                 <input
                   v-model="editInput"
@@ -233,9 +245,9 @@ function approachCreatedAt(approach) {
 }
 
 .today-approach-elapsed {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 400;
-  color: #9ca3af;
+  color: #6b7280;
   padding: 0 2px;
   min-width: 28px;
   text-align: center;
