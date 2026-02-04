@@ -84,9 +84,36 @@ function createParsers(dayjs, errors) {
     return /\/?record(?:@\w+)?\s*$/i.test(normalized);
   }
 
+  function parseCorrect(text) {
+    if (!text) {
+      return null;
+    }
+
+    const normalized = stripLeadingMention(text);
+    const match = normalized.match(/\/?correct(?:@\w+)?\s+([+-]?\d+)/i);
+    if (!match) {
+      return null;
+    }
+
+    const raw = match[1];
+    const value = Number.parseInt(raw, 10);
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+
+    if (raw.startsWith('+')) {
+      return { mode: 'add', value };
+    }
+    if (raw.startsWith('-')) {
+      return { mode: 'subtract', value: -value };
+    }
+    return { mode: 'set', value: value >= 0 ? value : 0 };
+  }
+
   return {
     parseAdd,
     parseAddNumbers,
+    parseCorrect,
     parseRecord,
     parseStatusDate,
     stripLeadingMention,

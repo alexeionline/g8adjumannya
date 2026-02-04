@@ -245,6 +245,58 @@ async function getTotalCountForUserDate(userId, date) {
   return Number(result.rows[0]?.total ?? 0);
 }
 
+async function setCountForUserDate(chatId, userId, date, count) {
+  const writeChatId = await resolveWriteChatId(chatId, userId);
+  const now = new Date().toISOString();
+  await pool.query(
+    `DELETE FROM daily_counts WHERE user_id = $1 AND date = $2`,
+    [userId, date]
+  );
+  if (count >= 0) {
+    await pool.query(
+      `
+        INSERT INTO daily_counts (chat_id, user_id, date, count, updated_at)
+        VALUES ($1, $2, $3, $4, $5)
+      `,
+      [writeChatId, userId, date, count, now]
+    );
+  }
+}
+
+async function getBestRecordForUser(userId) {
+  const result = await pool.query(
+    `
+      SELECT date, SUM(count) AS total
+      FROM daily_counts
+      WHERE user_id = $1
+      GROUP BY date
+      ORDER BY total DESC NULLS LAST
+      LIMIT 1
+    `,
+    [userId]
+  );
+  const row = result.rows[0];
+  return row
+    ? { record_count: Number(row.total), record_date: row.date }
+    : { record_count: 0, record_date: new Date().toISOString().slice(0, 10) };
+}
+
+async function syncUserRecord(userId) {
+  const { record_count, record_date } = await getBestRecordForUser(userId);
+  const now = new Date().toISOString();
+  await pool.query(
+    `
+      INSERT INTO user_records (user_id, max_add, record_count, record_date, updated_at)
+      VALUES ($1, $2, $2, $3, $4)
+      ON CONFLICT (user_id) DO UPDATE SET
+        record_count = excluded.record_count,
+        record_date = excluded.record_date,
+        updated_at = excluded.updated_at
+    `,
+    [userId, record_count, record_date, now]
+  );
+}
+
 async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
   await pool.query(
@@ -618,6 +670,9 @@ module.exports = {
   getRecordsByChat,
   getChatRecord,
   getTotalCountForUserDate,
+  setCountForUserDate,
+  getBestRecordForUser,
+  syncUserRecord,
   createApiToken,
   getChatIdByToken,
   getApiTokenByChat,
