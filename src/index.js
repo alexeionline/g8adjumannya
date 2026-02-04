@@ -9,7 +9,8 @@ const {
   addSharedChat,
   createApiToken,
   getApiTokenByChat,
-  getRecordsByChat,
+  getRecordsByChatV2,
+  getSharedUserIdsByChat,
   getStatusByDate,
   getTotalCountForUserDate,
   hasUserReached100,
@@ -84,7 +85,8 @@ const handleAdd = createAddHandler({
 });
 const handleRecord = createRecordHandler({
   dayjs,
-  getRecordsByChat,
+  getSharedUserIdsByChat,
+  getRecordsByChatV2,
   formatDisplayName,
   formatIndexEmoji,
   sendEphemeral: sendRecordReply,

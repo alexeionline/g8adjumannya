@@ -1,20 +1,22 @@
 function createRecordHandler({
   dayjs,
-  getRecordsByChat,
+  getSharedUserIdsByChat,
+  getRecordsByChatV2,
   formatDisplayName,
   formatIndexEmoji,
   sendEphemeral,
   errors,
 }) {
   return async function handleRecord(ctx) {
-    const records = await getRecordsByChat(ctx.chat.id);
+    const chatUserIds = await getSharedUserIdsByChat(ctx.chat.id);
+    const records = await getRecordsByChatV2(chatUserIds);
     if (!records.length) {
       return sendEphemeral(ctx, errors.RECORDS_EMPTY);
     }
 
     const lines = records.map((row, index) => {
       const name = formatDisplayName(row);
-      const date = dayjs(row.record_date).format('DD.MM.YYYY');
+      const date = dayjs(row.best_day_date).format('DD.MM.YYYY');
       const medalOrIndex =
         index === 0
           ? '🥇'
@@ -23,7 +25,7 @@ function createRecordHandler({
             : index === 2
               ? '🥉'
               : formatIndexEmoji(index);
-      return `${medalOrIndex} [${row.max_add}] ${name} (${date})`;
+      return `${medalOrIndex} [${row.best_approach}] ${name} (${date})`;
     });
 
     const message = lines.join('\n');
