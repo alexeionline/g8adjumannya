@@ -74,6 +74,7 @@ const { parseAdd, parseAddNumbers, parseRecord, parseStatusDate } = createParser
 const handleAdd = createAddHandler({
   dayjs,
   upsertUser,
+  addSharedChat,
   addCount,
   getTotalCountForUserDate,
   updateRecord,
