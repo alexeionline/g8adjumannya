@@ -10,10 +10,10 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
   addCount,
   getChatIdByToken,
-  getStatusByDate,
   getTotalCountForUserDate,
   getUserHistory,
   getUserById,
+  getApproachesCountsByChatAndDate,
   getSharedUserIdsByChat,
   getApproachById,
   getApproachesByUserDate,
@@ -209,15 +209,25 @@ function createApiApp() {
   });
 
   app.get('/status', authMiddleware, async (req, res) => {
-  const date = req.query.date
-    ? dayjs(req.query.date, 'YYYY-MM-DD', true)
-    : dayjs();
-  if (!date.isValid()) {
-    return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
-  }
-
-  const rows = await getStatusByDate(req.chatId, date.format('YYYY-MM-DD'));
-    res.json({ date: date.format('YYYY-MM-DD'), rows });
+    const date = req.query.date
+      ? dayjs(req.query.date, 'YYYY-MM-DD', true)
+      : dayjs();
+    if (!date.isValid()) {
+      return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    }
+    const dateStr = date.format('YYYY-MM-DD');
+    const chatUserIds = await getSharedUserIdsByChat(req.chatId);
+    const statusRows = await getStatusByDateV2(chatUserIds, dateStr);
+    const approachesByUser = await getApproachesCountsByChatAndDate(chatUserIds, dateStr);
+    const approachesMap = Object.fromEntries(approachesByUser.map((a) => [a.user_id, a.approaches]));
+    const rows = statusRows.map((r) => ({
+      user_id: r.user_id,
+      username: r.username ?? null,
+      first_name: null,
+      count: r.total,
+      approaches: approachesMap[r.user_id] || [],
+    }));
+    res.json({ date: dateStr, rows });
   });
 
   app.get('/records', authMiddleware, async (req, res) => {

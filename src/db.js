@@ -846,6 +846,32 @@ async function deleteApproach(id, userId) {
   return result.rowCount > 0;
 }
 
+/**
+ * Возвращает для каждого user_id из списка массив count подходов за дату (порядок по created_at).
+ * @returns {Promise<Array<{ user_id: number, approaches: number[] }>>}
+ */
+async function getApproachesCountsByChatAndDate(chatUserIds, date) {
+  if (!chatUserIds.length) {
+    return [];
+  }
+  const result = await pool.query(
+    `
+      SELECT user_id, array_agg(count ORDER BY created_at ASC) AS approaches
+      FROM daily_adds
+      WHERE user_id = ANY($1::bigint[]) AND date = $2
+      GROUP BY user_id
+    `,
+    [chatUserIds, date]
+  );
+  const normalize = (arr) => {
+    if (Array.isArray(arr)) return arr.map(Number);
+    if (typeof arr === 'string') return arr.replace(/[{}]/g, '').split(',').map(Number).filter(Number.isFinite);
+    return [];
+  };
+  const byUser = Object.fromEntries(result.rows.map((r) => [Number(r.user_id), normalize(r.approaches)]));
+  return chatUserIds.map((uid) => ({ user_id: uid, approaches: byUser[uid] || [] }));
+}
+
 async function getStatusByDateV2(chatUserIds, date) {
   if (!chatUserIds.length) {
     return [];
@@ -961,6 +987,7 @@ module.exports = {
   getApproachById,
   updateApproachCount,
   deleteApproach,
+  getApproachesCountsByChatAndDate,
   getStatusByDateV2,
   getRecordsByChatV2,
   getHistoryByUserIdV2,
