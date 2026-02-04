@@ -10,7 +10,6 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
   addCount,
   getChatIdByToken,
-  getRecordsByChat,
   getStatusByDate,
   getTotalCountForUserDate,
   getUserHistory,
@@ -222,8 +221,16 @@ function createApiApp() {
   });
 
   app.get('/records', authMiddleware, async (req, res) => {
-    const rows = await getRecordsByChat(req.chatId);
-    res.json({ rows });
+    const chatUserIds = await getSharedUserIdsByChat(req.chatId);
+    const rows = await getRecordsByChatV2(chatUserIds);
+    const mapped = rows.map((r) => ({
+      user_id: r.user_id,
+      username: r.username ?? null,
+      first_name: null,
+      max_add: r.best_approach,
+      record_date: r.best_day_date,
+    }));
+    res.json({ rows: mapped });
   });
 
   app.get('/history', authMiddleware, async (req, res) => {
