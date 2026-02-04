@@ -22,7 +22,6 @@ const {
 } = require('./db');
 const { createAddHandler } = require('./handlers/add');
 const { createApiTokenHandler } = require('./handlers/apiToken');
-const { createCorrectHandler } = require('./handlers/correct');
 const { createRecordHandler } = require('./handlers/record');
 const { createForceHandler } = require('./handlers/force');
 const { createShareHandler } = require('./handlers/share');
@@ -52,13 +51,12 @@ bot.use(session());
 bot.telegram
   .setMyCommands([
     { command: 'add', description: 'Добавить отжимания за сегодня' },
-    { command: 'force', description: 'Замотивировать участника' },
+    { command: 'status', description: 'Показать статус за дату' },
     { command: 'record', description: 'Показать рекорды чата' },
-    { command: 'web', description: 'Открыть веб‑приложение' },
     { command: 'share', description: 'Связать результаты между чатами' },
     { command: 'hide', description: 'Скрыть результаты в этом чате' },
-    { command: 'status', description: 'Показать статус за дату' },
-    { command: 'correct', description: 'Исправить результат за сегодня' },
+    { command: 'web', description: 'Открыть веб‑приложение' },
+    { command: 'force', description: 'Замотивировать участника' },
     { command: 'help', description: 'Справка по боту' },
   ])
   .catch((error) => {
@@ -71,7 +69,7 @@ const TEN_SECONDS_MS = 10 * 1000;
 const sendAddReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const sendStatusReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const sendRecordReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
-const { parseAdd, parseAddNumbers, parseCorrect, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
+const { parseAdd, parseAddNumbers, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
 const handleAdd = createAddHandler({
   dayjs,
   upsertUser,
@@ -113,15 +111,6 @@ const handleShare = createShareHandler({
 });
 const handleHide = createHideHandler({
   removeSharedChat,
-  sendEphemeral,
-});
-const handleCorrect = createCorrectHandler({
-  dayjs,
-  upsertUser,
-  addCount,
-  setCountForUserDate,
-  getTotalCountForUserDate,
-  syncUserRecord,
   sendEphemeral,
 });
 const handleApiToken = createApiTokenHandler({
@@ -204,14 +193,6 @@ bot.command('hide', async (ctx) => {
 
 bot.command('help', async (ctx) => {
   return sendEphemeral(ctx, HELP_TEXT);
-});
-
-bot.command('correct', async (ctx) => {
-  const parsed = parseCorrect(ctx.message && ctx.message.text);
-  if (!parsed) {
-    return sendEphemeral(ctx, 'Использование: correct 50 — установить сегодня в 50; correct +5 — добавить 5; correct -5 — отнять 5.');
-  }
-  return handleCorrect(ctx, parsed);
 });
 
 bot.command('web', async (ctx) => {
