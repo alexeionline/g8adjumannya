@@ -247,11 +247,13 @@ function createApiApp() {
     }
     const approach = await getApproachById(id);
     if (!approach) return res.status(404).json({ error: 'approach not found' });
+    const ownerId = Number(approach.user_id);
     const chatUserIds = await getSharedUserIdsByChat(req.chatId);
-    if (!chatUserIds.includes(approach.user_id)) {
+    const chatUserIdsNum = chatUserIds.map((uid) => Number(uid));
+    if (!chatUserIdsNum.includes(ownerId)) {
       return res.status(403).json({ error: 'no access to this approach' });
     }
-    if (approach.user_id !== userId) {
+    if (ownerId !== userId) {
       return res.status(403).json({ error: 'user_id does not own this approach' });
     }
     const updated = await updateApproachCount(id, userId, count);
@@ -267,11 +269,13 @@ function createApiApp() {
     }
     const approach = await getApproachById(id);
     if (!approach) return res.status(404).json({ error: 'approach not found' });
+    const ownerId = Number(approach.user_id);
     const chatUserIds = await getSharedUserIdsByChat(req.chatId);
-    if (!chatUserIds.includes(approach.user_id)) {
+    const chatUserIdsNum = chatUserIds.map((uid) => Number(uid));
+    if (!chatUserIdsNum.includes(ownerId)) {
       return res.status(403).json({ error: 'no access to this approach' });
     }
-    if (approach.user_id !== userId) {
+    if (ownerId !== userId) {
       return res.status(403).json({ error: 'user_id does not own this approach' });
     }
     await deleteApproach(id, userId);
