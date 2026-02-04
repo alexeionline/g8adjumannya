@@ -57,12 +57,16 @@ const todayDateKey = computed(() => {
 const todayResults = computed(() =>
   (data.statusRows || []).map((row) => {
     const raw = Array.isArray(row.approaches) ? row.approaches : []
-    const approaches = raw.map((a) => (typeof a === 'object' && a != null && 'id' in a ? { id: a.id, count: Number(a.count) || 0 } : { id: null, count: Number(a) || 0 }))
+    const approaches = raw.map((a) =>
+      typeof a === 'object' && a != null && 'id' in a
+        ? { id: a.id, count: Number(a.count) || 0, created_at: a.created_at ?? null }
+        : { id: null, count: Number(a) || 0, created_at: null }
+    )
     return {
       key: row.user_id,
       label: row.username || row.first_name || row.user_id,
       value: row.count,
-      approaches: approaches.length > 0 ? approaches : (row.count > 0 ? [{ id: null, count: row.count }] : []),
+      approaches: approaches.length > 0 ? approaches : (row.count > 0 ? [{ id: null, count: row.count, created_at: null }] : []),
     }
   })
 )

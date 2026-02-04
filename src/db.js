@@ -873,6 +873,7 @@ async function getApproachesCountsByChatAndDate(chatUserIds, date) {
       byUser[uid].push({
         id: Number(row.id),
         count: Number(row.approach_count) || 0,
+        created_at: row.created_at,
       });
     }
   }
