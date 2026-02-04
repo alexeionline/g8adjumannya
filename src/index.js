@@ -67,7 +67,7 @@ const TEN_SECONDS_MS = 10 * 1000;
 const sendAddReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const sendStatusReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
 const sendRecordReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
-const { parseAdd, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
+const { parseAdd, parseAddNumbers, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
 const handleAdd = createAddHandler({
   dayjs,
   upsertUser,
@@ -138,9 +138,9 @@ bot.use((ctx, next) => {
 });
 
 bot.command('add', async (ctx) => {
-  const value = parseAdd(ctx.message && ctx.message.text);
-  if (Number.isFinite(value)) {
-    return handleAdd(ctx, value);
+  const parsed = parseAdd(ctx.message && ctx.message.text);
+  if (parsed) {
+    return handleAdd(ctx, parsed);
   }
 
   await sendAddReply(ctx, 'Сколько отжиманий добавить?', {
@@ -263,27 +263,23 @@ bot.on('text', async (ctx) => {
       return sendEphemeral(ctx, ERRORS.WAITING_EXPIRED);
     }
 
-    const value = Number.parseInt(text, 10);
-    if (!Number.isFinite(value)) {
+    const parsed = parseAddNumbers(text);
+    if (!parsed) {
       return sendEphemeral(ctx, ERRORS.ENTER_NUMBER);
-    }
-
-    if (value < 0) {
-      return sendEphemeral(ctx, ERRORS.NON_NEGATIVE);
     }
 
     ctx.session.waitingForAdd = false;
     delete ctx.session.waitingForAddUntil;
-    return handleAdd(ctx, value);
+    return handleAdd(ctx, parsed);
   }
 
   if (parseRecord(text)) {
     return handleRecord(ctx);
   }
 
-  const value = parseAdd(text);
-  if (value) {
-    return handleAdd(ctx, value);
+  const parsed = parseAdd(text);
+  if (parsed) {
+    return handleAdd(ctx, parsed);
   }
 
   const parsed = parseStatusDate(text);

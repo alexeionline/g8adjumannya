@@ -17,23 +17,39 @@ function createParsers(dayjs, errors) {
     return trimmed.slice(match[0].length);
   }
 
+  function parseAddNumbers(str) {
+    if (!str || typeof str !== 'string') {
+      return null;
+    }
+    const parts = str.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return null;
+    }
+    const values = [];
+    for (const p of parts) {
+      if (!/^\d+$/.test(p)) {
+        return null;
+      }
+      const n = Number.parseInt(p, 10);
+      values.push(n);
+    }
+    const sum = values.reduce((a, b) => a + b, 0);
+    const max = Math.max(...values);
+    return { sum, max, values };
+  }
+
   function parseAdd(text) {
     if (!text) {
       return null;
     }
 
     const normalized = stripLeadingMention(text);
-    const match = normalized.match(/\/?add(?:@\w+)?\s+(\d+)/i);
+    const match = normalized.match(/\/?add(?:@\w+)?\s+(.+)/i);
     if (!match) {
       return null;
     }
 
-    const value = Number.parseInt(match[1], 10);
-    if (!Number.isFinite(value) || value < 0) {
-      return null;
-    }
-
-    return value;
+    return parseAddNumbers(match[1].trim());
   }
 
   function parseStatusDate(text) {
@@ -70,6 +86,7 @@ function createParsers(dayjs, errors) {
 
   return {
     parseAdd,
+    parseAddNumbers,
     parseRecord,
     parseStatusDate,
     stripLeadingMention,
