@@ -856,7 +856,7 @@ async function getApproachesCountsByChatAndDate(chatUserIds, date) {
   }
   const result = await pool.query(
     `
-      SELECT user_id, id, count, created_at
+      SELECT user_id, id, count AS approach_count, created_at
       FROM daily_adds
       WHERE user_id = ANY($1::bigint[]) AND date = $2
       ORDER BY user_id, created_at ASC
@@ -872,7 +872,7 @@ async function getApproachesCountsByChatAndDate(chatUserIds, date) {
     if (byUser[uid]) {
       byUser[uid].push({
         id: Number(row.id),
-        count: Number(row.count) || 0,
+        count: Number(row.approach_count) || 0,
       });
     }
   }

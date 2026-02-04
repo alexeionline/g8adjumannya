@@ -230,8 +230,8 @@ function createApiApp() {
       }));
       return res.json({ date: dateStr, rows });
     } catch (err) {
-      console.error('GET /status error:', err);
-      return res.status(500).json({ error: 'Failed to load status' });
+      console.error('GET /status error:', err.message || err);
+      return res.status(500).json({ error: 'Failed to load status', detail: err.message || String(err) });
     }
   });
 
