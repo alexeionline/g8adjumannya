@@ -888,7 +888,7 @@ async function getStatusByDateV2(chatUserIds, date) {
       SELECT
         u.user_id,
         COALESCE(SUM(da.count), 0)::int AS total,
-        u.username
+        us.username
       FROM (SELECT UNNEST($1::bigint[]) AS user_id) u
       LEFT JOIN daily_adds da ON da.user_id = u.user_id AND da.date = $2
       LEFT JOIN users us ON us.user_id = u.user_id
