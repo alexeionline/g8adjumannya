@@ -270,6 +270,35 @@ async function initDb() {
         throw error;
       }
     }
+
+    // Один раз наполнить shared_chats из daily_counts (кто в каком чате добавлял раньше). daily_counts больше нигде не используем.
+    const backfillSharedChatsKey = 'backfill_shared_chats_from_daily_counts_v1';
+    const backfillSharedCheck = await pool.query(
+      'SELECT 1 FROM migration_flags WHERE name = $1 LIMIT 1',
+      [backfillSharedChatsKey]
+    );
+    if (backfillSharedCheck.rowCount === 0) {
+      await pool.query('BEGIN');
+      try {
+        await pool.query(
+          'INSERT INTO migration_flags (name, applied_at) VALUES ($1, NOW())',
+          [backfillSharedChatsKey]
+        );
+        await pool.query(
+          `
+          INSERT INTO shared_chats (chat_id, user_id, created_at)
+          SELECT DISTINCT dc.chat_id, dc.user_id, NOW()
+          FROM daily_counts dc
+          WHERE EXISTS (SELECT 1 FROM users u WHERE u.user_id = dc.user_id)
+          ON CONFLICT (chat_id, user_id) DO NOTHING
+          `
+        );
+        await pool.query('COMMIT');
+      } catch (error) {
+        await pool.query('ROLLBACK');
+        throw error;
+      }
+    }
   } finally {
     await pool.query('SELECT pg_advisory_unlock($1)', [lockId]);
   }
