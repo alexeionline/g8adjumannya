@@ -19,12 +19,15 @@ function createAddHandler({
 
     const today = dayjs().format('YYYY-MM-DD');
     const hadReached100 = await hasUserReached100(ctx.chat.id, ctx.from.id);
-    for (const delta of values) {
+    const baseTime = dayjs();
+    for (let i = 0; i < values.length; i += 1) {
+      const createdAt = values.length > 1 ? baseTime.add(i, 'minute').toISOString() : undefined;
       await addCount({
         chatId: ctx.chat.id,
         userId: ctx.from.id,
         date: today,
-        delta,
+        delta: values[i],
+        createdAt,
       });
     }
     const total = await getTotalCountForUserDate(ctx.from.id, today);

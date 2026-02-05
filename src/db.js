@@ -324,7 +324,7 @@ async function upsertUser(from) {
   );
 }
 
-async function addCount({ chatId, userId, date, delta }) {
+async function addCount({ chatId, userId, date, delta, createdAt }) {
   const now = new Date().toISOString();
   const writeChatId = await resolveWriteChatId(chatId, userId);
   const result = await pool.query(
@@ -340,14 +340,15 @@ async function addCount({ chatId, userId, date, delta }) {
   );
 
   // Двойная запись в daily_adds: данные из бота / v1 API видны и в v2 (history, status).
-  // Отрицательный delta (correct в боте) в daily_adds не отражаем — правки делаются в v2 UI.
+  // createdAt — для нескольких подходов подряд: каждый следующий на минуту позже предыдущего.
   if (delta > 0 && delta <= 1000) {
+    const created = createdAt != null ? createdAt : now;
     await pool.query(
       `
         INSERT INTO daily_adds (user_id, date, count, created_at, migrated)
         VALUES ($1, $2, $3, $4, FALSE)
       `,
-      [userId, date, delta, now]
+      [userId, date, delta, created]
     ).catch((err) => {
       console.error('addCount: daily_adds insert failed (v2 sync):', err.message);
     });

@@ -221,13 +221,14 @@ function createApiApp() {
       const statusRows = await getStatusByDateV2(chatUserIds, dateStr);
       const approachesByUser = await getApproachesCountsByChatAndDate(chatUserIds, dateStr);
       const approachesMap = Object.fromEntries(approachesByUser.map((a) => [a.user_id, a.approaches]));
-      const rows = statusRows.map((r) => ({
+      const allRows = statusRows.map((r) => ({
         user_id: r.user_id,
         username: r.username ?? null,
         first_name: null,
         count: r.total,
         approaches: approachesMap[r.user_id] || [],
       }));
+      const rows = allRows.filter((r) => r.count > 0);
       return res.json({ date: dateStr, rows });
     } catch (err) {
       console.error('GET /status error:', err.message || err);
@@ -401,7 +402,8 @@ function createApiApp() {
       return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
     }
     const chatUserIds = await getSharedUserIdsByChat(chatIdNum);
-    const rows = await getStatusByDateV2(chatUserIds, date.format('YYYY-MM-DD'));
+    const allRows = await getStatusByDateV2(chatUserIds, date.format('YYYY-MM-DD'));
+    const rows = allRows.filter((r) => r.total > 0);
     const withDisplay = rows.map((r) => ({
       user_id: r.user_id,
       display_name: getDisplayNameV2(r),

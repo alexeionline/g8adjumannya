@@ -105,7 +105,8 @@ export const useDataStore = defineStore('data', {
           return
         }
         const data = await fetchStatus(auth, date)
-        this.statusRows = data.rows || []
+        const rows = data.rows || []
+        this.statusRows = rows.filter((r) => (r.count ?? r.total ?? 0) > 0)
       } catch (error) {
         this.error = extractErrorMessage(error)
       } finally {

@@ -150,7 +150,7 @@ h2 {
 
 .today-row {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 56px 1fr;
   gap: 12px;
   align-items: stretch;
   min-height: 80px;
