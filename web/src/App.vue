@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import AppHeader from './components/AppHeader.vue'
+import AddBlock from './components/AddBlock.vue'
 import TodayResults from './components/TodayResults.vue'
 import Leaderboard from './components/Leaderboard.vue'
 import CalendarView from './components/CalendarView.vue'
@@ -191,11 +192,14 @@ function moveMonth(direction) {
         <p>{{ data.error }}</p>
       </section>
 
-      <TodayResults
-        :items="todayResults"
+      <AddBlock
         :user-input="addCountInput"
         @update:userInput="addCountInput = $event"
         :on-submit="submitAdd"
+      />
+
+      <TodayResults
+        :items="todayResults"
         :on-refresh="refreshToday"
         :on-update-approach="handleUpdateApproach"
         :on-delete-approach="handleDeleteApproach"

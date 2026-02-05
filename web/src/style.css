@@ -212,6 +212,9 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 10px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
 }
 
 .leader-left {

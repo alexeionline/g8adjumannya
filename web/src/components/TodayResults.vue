@@ -1,26 +1,17 @@
 <script setup>
 import { ref } from 'vue'
+import ProgressBar from './ProgressBar.vue'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
-  userInput: { type: String, default: '' },
-  onSubmit: { type: Function, required: true },
   onRefresh: { type: Function, default: null },
   onUpdateApproach: { type: Function, default: null },
   onDeleteApproach: { type: Function, default: null },
 })
 
-const emit = defineEmits(['update:userInput'])
-
 const GOAL = 100
 const editing = ref(null)
 const editInput = ref('')
-
-function fillHeight(value) {
-  const numeric = Number(value) || 0
-  const percent = Math.max(0, Math.min(100, (numeric / GOAL) * 100))
-  return `${percent}%`
-}
 
 function isEditing(itemKey, index) {
   return editing.value && editing.value.itemKey === itemKey && editing.value.index === index
@@ -92,7 +83,6 @@ function elapsedTitle(prev, cur) {
 <template>
   <section class="card">
     <h2>Сегодня</h2>
-    <div class="divider"></div>
     <ul class="today-list">
       <li
         v-for="item in items"
@@ -101,10 +91,7 @@ function elapsedTitle(prev, cur) {
         class="today-row"
       >
         <div class="today-left">
-          <div class="today-glass">
-            <div class="today-glass-fill" :style="{ height: fillHeight(item.value) }"></div>
-            <span class="today-glass-number">{{ item.value }}</span>
-          </div>
+          <ProgressBar :value="item.value" :goal="GOAL" />
         </div>
         <div class="today-right">
           <div class="today-username">{{ item.label }}</div>
@@ -144,20 +131,14 @@ function elapsedTitle(prev, cur) {
         </div>
       </li>
     </ul>
-    <div class="divider"></div>
-    <div class="input-row">
-      <input
-        type="text"
-        placeholder="Добавить кол-во"
-        :value="userInput"
-        @input="emit('update:userInput', $event.target.value)"
-      />
-      <button type="button" @click="onSubmit">Add</button>
-    </div>
   </section>
 </template>
 
 <style scoped>
+h2 {
+  margin-bottom: 16px;
+}
+
 .today-list {
   list-style: none;
   margin: 0;
@@ -173,6 +154,9 @@ function elapsedTitle(prev, cur) {
   gap: 12px;
   align-items: stretch;
   min-height: 80px;
+  padding: 10px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
 }
 
 .today-left {
@@ -180,53 +164,20 @@ function elapsedTitle(prev, cur) {
   align-items: stretch;
 }
 
-.today-glass {
-  position: relative;
-  width: 100%;
-  min-height: 72px;
-  border-radius: 8px 8px 4px 4px;
-  background: #f0f2f6;
-  border: 1px solid #cfd7e6;
-  box-shadow: inset 0 -2px 8px rgba(15, 23, 42, 0.06);
-  overflow: hidden;
-}
-
-.today-glass-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: 0 0 4px 4px;
-  transition: height 0.35s ease-out;
-  background: #22c55e;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.today-glass-number {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  text-align: center;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1f2a44;
-  text-shadow: 0 0 2px #fff, 0 1px 2px #fff;
-}
-
 .today-right {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
+  width: 100%;
 }
 
 .today-username {
-  text-align: center;
+  text-align: left;
+  padding: 5px;
+  border-bottom: 1px solid #edf0f5;
   font-weight: 600;
   font-size: 15px;
   color: #1f2a44;
@@ -240,8 +191,9 @@ function elapsedTitle(prev, cur) {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
+  width: 100%;
 }
 
 .today-approach-elapsed {
@@ -258,14 +210,23 @@ function elapsedTitle(prev, cur) {
   align-items: center;
   justify-content: center;
   min-width: 24px;
-  height: 24px;
+  height: 12px;
   padding: 0 4px;
-  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: #334155;
-  background: #e5e7eb;
-  border: 1px solid #d1d5db;
+  color: #1f2a44;
+  background: transparent;
+  border: none;
+}
+
+/* У всех кроме последнего — правый бордер; у последнего (и единственного) — без бордеров */
+.today-approach-square:not(:last-child) {
+  border-right: 1px solid #edf0f5;
+}
+
+/* У всех кроме первого — левый бордер */
+.today-approach-square:not(:first-child) {
+  border-left: 1px solid #edf0f5;
 }
 
 .today-approach-clickable {
@@ -279,16 +240,10 @@ function elapsedTitle(prev, cur) {
   cursor: default;
 }
 
-.result-done .today-approach-square {
-  background: #dcfce7;
-  border-color: #86efac;
-  color: #166534;
-}
-
+.result-done .today-approach-square,
 .result-pending .today-approach-square {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background: transparent;
+  color: #1f2a44;
 }
 
 .today-approach-edit {
@@ -335,25 +290,5 @@ function elapsedTitle(prev, cur) {
 .today-approach-btn-delete:hover {
   background: #fee2e2;
   border-color: #fca5a5;
-}
-
-.input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.input-row input {
-  flex: 1;
-  border: 1px solid #d7dee9;
-  border-radius: 10px;
-  padding: 8px 12px;
-}
-
-.input-row button {
-  background: #5b7fd1;
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 16px;
 }
 </style>
