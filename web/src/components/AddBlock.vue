@@ -11,12 +11,16 @@ const emit = defineEmits(['update:userInput'])
   <section class="card add-block">
     <div class="input-row">
       <input
-        type="text"
+        type="number"
+        inputmode="numeric"
+        pattern="[0-9]*"
         placeholder="Добавить кол-во"
+        min="1"
+        max="1000"
         :value="userInput"
         @input="emit('update:userInput', $event.target.value)"
       />
-      <button type="button" @click="onSubmit">Add</button>
+      <button type="button" @click="onSubmit">Добавить</button>
     </div>
   </section>
 </template>
@@ -35,7 +39,7 @@ const emit = defineEmits(['update:userInput'])
 }
 
 .input-row button {
-  background: #5b7fd1;
+  background: #2386cb;
   color: #ffffff;
   border: none;
   border-radius: 10px;

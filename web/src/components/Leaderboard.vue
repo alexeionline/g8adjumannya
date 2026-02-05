@@ -27,4 +27,9 @@ defineProps({
 h2 {
   margin-bottom: 16px;
 }
+
+.date {
+  color: #6b7280;
+  font-size: 11px;
+}
 </style>
