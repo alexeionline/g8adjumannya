@@ -14,17 +14,11 @@ function getMentionFromEntities(message) {
     if (entity.type === 'text_mention' && entity.user) {
       const user = entity.user;
       const name = user.first_name || user.username || 'User';
-      return {
-        html: `<a href="tg://user?id=${user.id}">${escapeHtml(name)}</a>`,
-        useHtml: true,
-      };
+      return { html: escapeHtml(name), useHtml: true };
     }
     if (entity.type === 'mention') {
       const mentionText = text.slice(entity.offset, entity.offset + entity.length);
-      return {
-        html: `<a href="https://t.me/${mentionText.slice(1)}">${escapeHtml(mentionText)}</a>`,
-        useHtml: true,
-      };
+      return { html: escapeHtml(mentionText), useHtml: true };
     }
   }
   return null;
@@ -51,7 +45,7 @@ function createForceHandler({ forceMessages, errors, sendEphemeral }) {
         return sendEphemeral(ctx, errors.FORCE_FORMAT);
       }
       const username = match[1];
-      mentionHtml = `<a href="https://t.me/${username}">${escapeHtml('@' + username)}</a>`;
+      mentionHtml = escapeHtml('@' + username);
       useHtml = true;
     }
 
