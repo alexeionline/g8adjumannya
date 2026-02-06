@@ -138,7 +138,14 @@ bot.start((ctx) => {
 });
 
 bot.use((ctx, next) => {
-  const text = ctx.message && ctx.message.text;
+  const msg = ctx.message;
+  const text = msg && msg.text;
+  const isForwarded =
+    msg && (msg.forward_from || msg.forward_from_chat || msg.forward_origin);
+  if (isForwarded && text && text.trim().startsWith('/')) {
+    return;
+  }
+
   if (text && text.trim().startsWith('/')) {
     const command = text.trim().split(/\s+/)[0].slice(1);
     const commandName = command.split('@')[0].toLowerCase();
