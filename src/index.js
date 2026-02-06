@@ -40,6 +40,14 @@ const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES, FIRST_100_MESSAGE, HELP_TEXT } = 
 
 dayjs.extend(customParseFormat);
 
+/** Команда выполняется только если она первое слово в сообщении (чтобы не срабатывало на "отправь /add 10"). */
+function isCommandFirstInMessage(text, commandName) {
+  if (!text || typeof text !== 'string') return false;
+  const t = text.trim();
+  const re = new RegExp(`^/${commandName}(@\\w+)?(\\s|$)`);
+  return re.test(t);
+}
+
 const token = process.env.BOT_TOKEN;
 if (!token) {
   throw new Error('BOT_TOKEN is required');
@@ -124,6 +132,7 @@ const handleApiToken = createApiTokenHandler({
 });
 
 bot.start((ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'start')) return;
   sendEphemeral(ctx, COMMANDS_TEXT);
   handleApiToken(ctx);
 });
@@ -144,6 +153,7 @@ bot.use((ctx, next) => {
 });
 
 bot.command('add', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'add')) return;
   const parsed = parseAdd(ctx.message && ctx.message.text);
   if (parsed) {
     return handleAdd(ctx, parsed);
@@ -160,6 +170,7 @@ bot.command('add', async (ctx) => {
 });
 
 bot.command('cancel', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'cancel')) return;
   if (!ctx.session || !ctx.session.waitingForAdd) {
     return sendEphemeral(ctx, ERRORS.WAITING_NONE);
   }
@@ -171,6 +182,7 @@ bot.command('cancel', async (ctx) => {
 });
 
 bot.command('status', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'status')) return;
   const parsed = parseStatusDate(ctx.message && ctx.message.text);
   if (!parsed) {
     return sendEphemeral(ctx, ERRORS.STATUS_FORMAT);
@@ -180,26 +192,32 @@ bot.command('status', async (ctx) => {
 });
 
 bot.command('record', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'record')) return;
   return handleRecord(ctx);
 });
 
 bot.command('force', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'force')) return;
   return handleForce(ctx);
 });
 
 bot.command('share', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'share')) return;
   return handleShare(ctx);
 });
 
 bot.command('hide', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'hide')) return;
   return handleHide(ctx);
 });
 
 bot.command('help', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'help')) return;
   return sendEphemeral(ctx, HELP_TEXT);
 });
 
 bot.command('web', async (ctx) => {
+  if (!isCommandFirstInMessage(ctx.message?.text, 'web')) return;
   const url = process.env.WEB_APP_URL;
   if (!url) {
     return sendEphemeral(ctx, ERRORS.WEB_MISSING);
