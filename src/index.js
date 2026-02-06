@@ -72,7 +72,7 @@ bot.telegram
     console.error('Failed to set bot commands:', error);
   });
 
-const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
+const { cancelDeletion, sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const TEN_SECONDS_MS = 10 * 1000;
 const sendAddReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
@@ -139,6 +139,11 @@ bot.start((ctx) => {
 
 bot.use((ctx, next) => {
   const msg = ctx.message;
+  const replyTo = msg && msg.reply_to_message;
+  if (replyTo && replyTo.from && replyTo.from.is_bot && replyTo.chat && replyTo.message_id) {
+    cancelDeletion(replyTo.chat.id, replyTo.message_id);
+  }
+
   const text = msg && msg.text;
   const isForwarded =
     msg && (msg.forward_from || msg.forward_from_chat || msg.forward_origin);

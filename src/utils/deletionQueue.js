@@ -63,7 +63,18 @@ function createDeletionHelpers(bot, delayMs = 30_000) {
     enqueueDeletion(ctx.chat.id, ctx.message.message_id, overrideDelayMs);
   }
 
+  function cancelDeletion(chatId, messageId) {
+    const key = `${chatId}:${messageId}`;
+    const entry = deletionIndex.get(key);
+    if (!entry) return;
+    deletionIndex.delete(key);
+    const idx = deletionQueue.indexOf(entry);
+    if (idx !== -1) deletionQueue.splice(idx, 1);
+    scheduleDeletionTimer();
+  }
+
   return {
+    cancelDeletion,
     enqueueDeletion,
     scheduleDeleteMessage,
     sendEphemeral,
