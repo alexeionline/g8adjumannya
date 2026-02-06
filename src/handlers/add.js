@@ -3,7 +3,7 @@ function createAddHandler({
   upsertUser,
   addSharedChat,
   addCount,
-  getTotalCountForUserDate,
+  getTotalForUserDateV2,
   updateRecord,
   hasUserReached100,
   formatDisplayName,
@@ -30,7 +30,7 @@ function createAddHandler({
         createdAt,
       });
     }
-    const total = await getTotalCountForUserDate(ctx.from.id, today);
+    const total = await getTotalForUserDateV2(ctx.from.id, today);
     await updateRecord({
       chatId: ctx.chat.id,
       userId: ctx.from.id,

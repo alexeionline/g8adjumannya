@@ -10,7 +10,6 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
   addCount,
   getChatIdByToken,
-  getTotalCountForUserDate,
   getUserHistory,
   getUserById,
   getApproachesCountsByChatAndDate,
@@ -202,7 +201,7 @@ function createApiApp() {
     delta,
   });
   const dateStr = date.format('YYYY-MM-DD');
-  const total = await getTotalCountForUserDate(userId, dateStr);
+  const total = await getTotalForUserDateV2(userId, dateStr);
 
   notifyAddInChat(req.chatId, normalizedUser, delta, total);
   res.json({ total });
