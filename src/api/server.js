@@ -221,13 +221,17 @@ function createApiApp() {
       const statusRows = await getStatusByDateV2(chatUserIds, dateStr);
       const approachesByUser = await getApproachesCountsByChatAndDate(chatUserIds, dateStr);
       const approachesMap = Object.fromEntries(approachesByUser.map((a) => [a.user_id, a.approaches]));
-      const allRows = statusRows.map((r) => ({
-        user_id: r.user_id,
-        username: r.username ?? null,
-        first_name: null,
-        count: r.total,
-        approaches: approachesMap[r.user_id] || [],
-      }));
+      const allRows = statusRows.map((r) => {
+        const approaches = approachesMap[r.user_id] || [];
+        const countFromApproaches = approaches.reduce((s, a) => s + (Number(a.count) || 0), 0);
+        return {
+          user_id: r.user_id,
+          username: r.username ?? null,
+          first_name: null,
+          count: countFromApproaches,
+          approaches,
+        };
+      });
       const rows = allRows.filter((r) => r.count > 0);
       return res.json({ date: dateStr, rows });
     } catch (err) {
@@ -402,14 +406,23 @@ function createApiApp() {
       return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
     }
     const chatUserIds = await getSharedUserIdsByChat(chatIdNum);
-    const allRows = await getStatusByDateV2(chatUserIds, date.format('YYYY-MM-DD'));
-    const rows = allRows.filter((r) => r.total > 0);
+    const dateStr = date.format('YYYY-MM-DD');
+    const statusRows = await getStatusByDateV2(chatUserIds, dateStr);
+    const approachesByUser = await getApproachesCountsByChatAndDate(chatUserIds, dateStr);
+    const approachesMap = Object.fromEntries(approachesByUser.map((a) => [a.user_id, a.approaches]));
+    const rows = statusRows
+      .map((r) => {
+        const approaches = approachesMap[r.user_id] || [];
+        const total = approaches.reduce((s, a) => s + (Number(a.count) || 0), 0);
+        return { user_id: r.user_id, username: r.username, total };
+      })
+      .filter((r) => r.total > 0);
     const withDisplay = rows.map((r) => ({
       user_id: r.user_id,
       display_name: getDisplayNameV2(r),
       total: r.total,
     }));
-    return res.json({ date: date.format('YYYY-MM-DD'), rows: withDisplay });
+    return res.json({ date: dateStr, rows: withDisplay });
   });
 
   v2.get('/records', authV2Middleware, async (req, res) => {
