@@ -88,8 +88,16 @@ button {
 
 .app {
   width: 100%;
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 60px;
+  box-sizing: border-box;
+}
+
+#app {
+  padding: 0;
 }
 
 .phone {
@@ -97,6 +105,60 @@ button {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* --- Варианты фона и раскладки (для демо) --- */
+
+/* Текущий (по умолчанию) */
+.app[data-layout="default"] {
+  background: var(--background);
+}
+
+/* Тёплый: мягкий градиент, больше воздуха */
+.app[data-layout="warm"] {
+  background: linear-gradient(180deg, #faf8f5 0%, #f5f0e8 50%, #f0ebe3 100%);
+}
+
+.app[data-layout="warm"] .phone {
+  gap: 28px;
+  width: min(440px, 100%);
+}
+
+.app[data-layout="warm"] [data-slot="card"] {
+  box-shadow: 0 2px 12px rgba(120, 100, 80, 0.08);
+  border-radius: 18px;
+}
+
+/* Глубина: тёмный фон, карточки «всплывают» */
+.app[data-layout="depth"] {
+  background: linear-gradient(160deg, #e4e6eb 0%, #dce0e6 100%);
+}
+
+.app[data-layout="depth"] .phone {
+  gap: 22px;
+}
+
+.app[data-layout="depth"] [data-slot="card"] {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+}
+
+/* Редакционный: спокойный тон, ритм, минимум теней */
+.app[data-layout="editorial"] {
+  background: #f8f7f5;
+}
+
+.app[data-layout="editorial"] .phone {
+  gap: 32px;
+  width: min(400px, 100%);
+}
+
+.app[data-layout="editorial"] [data-slot="card"] {
+  box-shadow: none;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  background: #fff;
 }
 
 /* Phase 5: staggered fade-in for sections (200–350 ms, ease-out) */
