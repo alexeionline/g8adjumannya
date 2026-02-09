@@ -21,6 +21,10 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+  /* Calendar day tones */
+  --calendar-empty: oklch(0.75 0 0);
+  --calendar-mid: oklch(0.75 0.15 85);
+  --calendar-high: oklch(0.55 0.2 145);
 }
 
 @theme inline {
@@ -93,6 +97,39 @@ button {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* Phase 5: staggered fade-in for sections (200–350 ms, ease-out) */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.phone > * {
+  animation: fade-in-up 0.3s ease-out both;
+}
+
+.phone > *:nth-child(1) { animation-delay: 0ms; }
+.phone > *:nth-child(2) { animation-delay: 40ms; }
+.phone > *:nth-child(3) { animation-delay: 80ms; }
+.phone > *:nth-child(4) { animation-delay: 120ms; }
+.phone > *:nth-child(5) { animation-delay: 160ms; }
+.phone > *:nth-child(6) { animation-delay: 200ms; }
+.phone > *:nth-child(7) { animation-delay: 240ms; }
+.phone > *:nth-child(8) { animation-delay: 280ms; }
+.phone > *:nth-child(9) { animation-delay: 320ms; }
+.phone > *:nth-child(10) { animation-delay: 360ms; }
+
+/* Touch targets: min 44px height for tap areas (a11y) */
+.phone button[type="button"],
+.phone [data-slot="button"] {
+  min-height: 44px;
 }
 
 .brand {
@@ -324,87 +361,3 @@ button {
   text-align: center;
 }
 
-.calendar {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 12px 24px rgba(31, 42, 68, 0.08);
-}
-
-.calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  color: #42526b;
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.calendar-header .icon {
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-  color: #8b98ad;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.weekday {
-  font-size: 12px;
-  color: #8b98ad;
-  text-align: center;
-}
-
-.day {
-  text-align: center;
-  padding: 4px;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #334155;
-  position: relative;
-  min-height: 44px;
-}
-
-.day-number {
-  position: absolute;
-  top: 4px;
-  left: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.day-count {
-  position: absolute;
-  right: 6px;
-  bottom: 4px;
-  font-size: 9px;
-  font-weight: 500;
-  border: 1px solid #ffffff;
-  border-radius: 8px;
-  padding: 0 4px;
-  line-height: 1.4;
-}
-
-.day.empty {
-  color: #b0b7c3;
-}
-
-.day.high {
-  background: #22c55e;
-  color: #ffffff;
-  font-weight: 700;
-}
-
-.day.mid {
-  background: #f59e0b;
-  color: #ffffff;
-  font-weight: 700;
-}
-
- 

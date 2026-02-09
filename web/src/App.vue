@@ -214,20 +214,20 @@ function moveMonth(direction) {
           <CardTitle>Статистика</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul class="stats">
-            <li>
-              <span>Дней участия</span>
-              <span>{{ participationDays }}</span>
-            </li>
-            <li>
-              <span>Всего отжиманий</span>
-              <span>{{ totalPushups }}</span>
-            </li>
-            <li>
-              <span>Среднее за день</span>
-              <span>{{ averagePushups }}</span>
-            </li>
-          </ul>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">Дней участия</span>
+              <span class="stat-value">{{ participationDays }}</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Всего отжиманий</span>
+              <span class="stat-value">{{ totalPushups }}</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Среднее за день</span>
+              <span class="stat-value">{{ averagePushups }}</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -240,3 +240,32 @@ function moveMonth(direction) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  background: var(--muted);
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+</style>
