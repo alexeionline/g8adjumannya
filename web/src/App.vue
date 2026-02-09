@@ -5,6 +5,8 @@ import AddBlock from './components/AddBlock.vue'
 import TodayResults from './components/TodayResults.vue'
 import Leaderboard from './components/Leaderboard.vue'
 import CalendarView from './components/CalendarView.vue'
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from './components/ui/alert'
 import { useAuthStore } from './stores/auth'
 import { useDataStore } from './stores/data'
 
@@ -180,17 +182,17 @@ function moveMonth(direction) {
     <div class="phone">
       <AppHeader title="G8 Adjumannya" />
 
-      <section v-if="!auth.isReady && !isDemo" class="card">
-        <h2>Нет доступа</h2>
-        <div class="divider"></div>
-        <p>Открой WebApp через команду /web в нужном чате.</p>
-      </section>
+      <Alert v-if="!auth.isReady && !isDemo" variant="default">
+        <AlertTitle>Нет доступа</AlertTitle>
+        <AlertDescription>
+          Открой WebApp через команду /web в нужном чате.
+        </AlertDescription>
+      </Alert>
 
-      <section v-if="data.error" class="card">
-        <h2>Ошибка</h2>
-        <div class="divider"></div>
-        <p>{{ data.error }}</p>
-      </section>
+      <Alert v-if="data.error" variant="destructive">
+        <AlertTitle>Ошибка</AlertTitle>
+        <AlertDescription>{{ data.error }}</AlertDescription>
+      </Alert>
 
       <AddBlock
         :user-input="addCountInput"
@@ -207,24 +209,27 @@ function moveMonth(direction) {
 
       <Leaderboard :items="leaderboard" />
 
-      <section class="card">
-        <h2>Статистика</h2>
-        <div class="divider"></div>
-        <ul class="stats">
-          <li>
-            <span>Дней участия</span>
-            <span>{{ participationDays }}</span>
-          </li>
-          <li>
-            <span>Всего отжиманий</span>
-            <span>{{ totalPushups }}</span>
-          </li>
-          <li>
-            <span>Среднее за день</span>
-            <span>{{ averagePushups }}</span>
-          </li>
-        </ul>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Статистика</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul class="stats">
+            <li>
+              <span>Дней участия</span>
+              <span>{{ participationDays }}</span>
+            </li>
+            <li>
+              <span>Всего отжиманий</span>
+              <span>{{ totalPushups }}</span>
+            </li>
+            <li>
+              <span>Среднее за день</span>
+              <span>{{ averagePushups }}</span>
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
 
       <CalendarView
         :month-label="monthLabel"

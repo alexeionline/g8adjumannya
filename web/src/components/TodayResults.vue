@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ProgressBar from './ProgressBar.vue'
 
 const props = defineProps({
@@ -81,9 +82,12 @@ function elapsedTitle(prev, cur) {
 </script>
 
 <template>
-  <section class="card">
-    <h2>Сегодня</h2>
-    <ul class="today-list">
+  <Card>
+    <CardHeader>
+      <CardTitle>Сегодня</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <ul class="today-list">
       <li
         v-for="item in items"
         :key="item.key"
@@ -131,14 +135,11 @@ function elapsedTitle(prev, cur) {
         </div>
       </li>
     </ul>
-  </section>
+    </CardContent>
+  </Card>
 </template>
 
 <style scoped>
-h2 {
-  margin-bottom: 16px;
-}
-
 .today-list {
   list-style: none;
   margin: 0;
