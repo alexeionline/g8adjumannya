@@ -494,6 +494,12 @@ async function getRecordsByChatV2(chatUserIds) {
         FROM daily_adds
         WHERE user_id = ANY($1::bigint[])
         GROUP BY user_id
+      ),
+      first_activity AS (
+        SELECT user_id, MIN(date) AS first_date
+        FROM daily_adds
+        WHERE user_id = ANY($1::bigint[])
+        GROUP BY user_id
       )
       SELECT
         bd.user_id,
@@ -503,10 +509,15 @@ async function getRecordsByChatV2(chatUserIds) {
         ba.best_approach_date,
         COALESCE(ot.total_all, 0) AS total_all,
         u.username,
-        u.created_at::date AS joined_at
+        CASE
+          WHEN u.created_at IS NULL THEN fa.first_date
+          WHEN fa.first_date IS NULL THEN u.created_at::date
+          ELSE LEAST(u.created_at::date, fa.first_date)
+        END AS joined_at
       FROM best_day bd
       LEFT JOIN best_approach ba ON ba.user_id = bd.user_id
       LEFT JOIN overall_totals ot ON ot.user_id = bd.user_id
+      LEFT JOIN first_activity fa ON fa.user_id = bd.user_id
       LEFT JOIN users u ON u.user_id = bd.user_id
       ORDER BY COALESCE(ba.best_approach, 0) DESC, bd.best_day_total DESC, bd.user_id ASC
     `,
