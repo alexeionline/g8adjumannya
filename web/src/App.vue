@@ -234,11 +234,25 @@ const participationDays = computed(() =>
 const totalPushups = computed(() =>
   Object.values(data.historyDays || {}).reduce((sum, count) => sum + Number(count || 0), 0)
 )
-const averagePushups = computed(() => {
-  if (!participationDays.value) {
-    return '0'
+const nonMigratedApproachesTotal = computed(() =>
+  Object.values(data.historyApproachesDays || {}).reduce((sum, count) => sum + Number(count || 0), 0)
+)
+const nonMigratedApproachDays = computed(() =>
+  Object.values(data.historyApproachesDays || {}).filter((count) => Number(count || 0) > 0).length
+)
+const averageApproachesPerDay = computed(() => {
+  if (!nonMigratedApproachDays.value) {
+    return '0.0'
   }
-  return (totalPushups.value / participationDays.value).toFixed(1)
+  return (nonMigratedApproachesTotal.value / nonMigratedApproachDays.value).toFixed(1)
+})
+const averagePerApproach = computed(() => {
+  const totalApproaches = Number(nonMigratedApproachesTotal.value || 0)
+  const totalReps = Number(data.timeOfDayPushups?.total || 0)
+  if (!totalApproaches || !totalReps) {
+    return '0.0'
+  }
+  return (totalReps / totalApproaches).toFixed(1)
 })
 const dayPeriodShare = computed(() => {
   const source = data.timeOfDayPushups || {}
@@ -416,11 +430,14 @@ async function onChangeChat(event) {
             <p class="stat-value">{{ totalPushups }}</p>
           </article>
           <article class="stat-item">
-            <p class="stat-key">Среднее</p>
-            <p class="stat-value">{{ averagePushups }}</p>
+            <p class="stat-key">В среднем в день</p>
+            <p class="stat-value">{{ averageApproachesPerDay }}</p>
           </article>
           <article class="stat-item">
-            <p class="stat-key">Время суток</p>
+            <p class="stat-key">В среднем за подход</p>
+            <p class="stat-value">{{ averagePerApproach }}</p>
+          </article>
+          <article class="stat-item">
             <div class="stat-dayparts">
               <p class="daypart-row"><span>Утро</span><strong>{{ dayPeriodShare.morning }}</strong></p>
               <p class="daypart-row"><span>День</span><strong>{{ dayPeriodShare.day }}</strong></p>
