@@ -33,6 +33,8 @@ const rankedItems = computed(() => {
       label: item.label,
       value: Number(item[keys.valueKey] || 0),
       date: keys.dateKey ? String(item[keys.dateKey] || '') : '',
+      joinedAtLabel: String(item.joinedAtLabel || ''),
+      challengeDays: Number(item.challengeDays || 0),
     }))
     .filter((item) => item.value > 0)
     .sort((a, b) => b.value - a.value || String(a.label).localeCompare(String(b.label), 'ru'))
@@ -41,6 +43,23 @@ const rankedItems = computed(() => {
       rank: index + 1,
     }))
 })
+
+function formatDaysLabel(days) {
+  const value = Number(days || 0)
+  if (!value) return ''
+  const mod10 = value % 10
+  const mod100 = value % 100
+  if (mod10 === 1 && mod100 !== 11) return `${value} день`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${value} дня`
+  return `${value} дней`
+}
+
+function formatSpeed(value, days) {
+  const total = Number(value || 0)
+  const spanDays = Number(days || 0)
+  if (!spanDays || !Number.isFinite(total)) return ''
+  return `${Math.round(total / spanDays)} в день`
+}
 
 const displayedItems = computed(() => (showAll.value ? rankedItems.value : rankedItems.value.slice(0, TOP_LIMIT)))
 
@@ -75,10 +94,19 @@ watch(activeTab, () => {
               <span class="rank" :class="`rank-${Math.min(item.rank, 3)}`">{{ item.rank }}</span>
               <div>
                 <p class="name">{{ item.label }}</p>
+                <p v-if="activeTab === 'total' && item.joinedAtLabel" class="date">
+                  с {{ item.joinedAtLabel }}
+                  <span v-if="item.challengeDays > 0">({{ formatDaysLabel(item.challengeDays) }})</span>
+                </p>
                 <p v-if="item.date" class="date">{{ item.date }}</p>
               </div>
             </div>
-            <div class="value">{{ item.value }}</div>
+            <div class="value-wrap">
+              <div class="value">{{ item.value }}</div>
+              <div v-if="activeTab === 'total' && item.challengeDays > 0" class="value-sub">
+                {{ formatSpeed(item.value, item.challengeDays) }}
+              </div>
+            </div>
           </li>
         </ul>
         <div v-if="rankedItems.length > TOP_LIMIT" class="show-more-wrap">
@@ -204,6 +232,17 @@ watch(activeTab, () => {
   font-size: 0.98rem;
   font-weight: 800;
   color: var(--foreground-strong);
+}
+
+.value-wrap {
+  display: grid;
+  justify-items: end;
+}
+
+.value-sub {
+  margin-top: 0.08rem;
+  font-size: 0.66rem;
+  color: var(--muted-foreground);
 }
 
 .leader-empty {

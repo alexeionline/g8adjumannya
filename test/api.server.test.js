@@ -626,7 +626,7 @@ test('v2 /records validates chat and returns display mapping', async () => {
   const dbMock = buildDbMock({
     isUserSharedInChat: async (chatId) => chatId === -1001,
     getSharedUserIdsByChat: async () => [7],
-    getRecordsByChatV2: async () => [{ user_id: 7, username: 'neo', best_approach: 55, best_approach_date: '2026-02-02', best_day_total: 180, best_day_date: '2026-02-01', total_all: 3210 }],
+    getRecordsByChatV2: async () => [{ user_id: 7, username: 'neo', best_approach: 55, best_approach_date: '2026-02-02', best_day_total: 180, best_day_date: '2026-02-01', total_all: 3210, joined_at: '2025-12-15' }],
     getDisplayNameV2: () => 'Neo',
   });
 
@@ -662,6 +662,7 @@ test('v2 /records validates chat and returns display mapping', async () => {
       best_day_total: 180,
       best_day_date: '2026-02-01',
       total_all: 3210,
+      joined_at: '2025-12-15',
     });
   } finally {
     restore();

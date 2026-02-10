@@ -220,6 +220,8 @@ export function buildRecordsFromStatus(statusRows) {
       const bestApproach = Math.max(...(row.approaches || []).map((entry) => Number(entry.count || 0)), 0)
       const bestDay = Number(row.count || 0)
       const bonus = (index + 1) * 3
+      const joinedAt = new Date(now)
+      joinedAt.setDate(joinedAt.getDate() - (index + 12) * 7)
       return {
         user_id: row.user_id,
         username: row.username,
@@ -232,6 +234,7 @@ export function buildRecordsFromStatus(statusRows) {
         best_day_total: bestDay,
         best_day_date: todayKey,
         total_all: bestDay * 18 + bestApproach * 4 + bonus * 10,
+        joined_at: formatDateKey(joinedAt),
       }
     })
     .sort((a, b) => b.best_approach - a.best_approach)

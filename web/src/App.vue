@@ -198,6 +198,8 @@ const leaderboard = computed(() =>
     bestDay: Number(row.best_day_total ?? 0),
     bestDayDate: formatDate(row.best_day_date ?? row.record_date),
     totalAll: Number(row.total_all ?? 0),
+    joinedAtLabel: formatDate(row.joined_at),
+    challengeDays: calculateChallengeDays(row.joined_at),
     rank: index + 1,
   }))
 )
@@ -292,6 +294,18 @@ function formatDate(dateStr) {
   const month = String(parsed.getMonth() + 1).padStart(2, '0')
   const year = parsed.getFullYear()
   return `${day}.${month}.${year}`
+}
+
+function calculateChallengeDays(dateStr) {
+  if (!dateStr) return 0
+  const joined = new Date(dateStr)
+  if (Number.isNaN(joined.getTime())) return 0
+  const start = new Date(joined)
+  start.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diffDays = Math.floor((today.getTime() - start.getTime()) / 86_400_000) + 1
+  return Math.max(1, diffDays)
 }
 
 async function submitAdd() {

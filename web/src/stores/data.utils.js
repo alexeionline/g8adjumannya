@@ -87,6 +87,7 @@ export function normalizeRecordsRows(rows) {
       best_day_total: Number(row.best_day_total ?? row.record_count ?? 0),
       best_day_date: row.best_day_date ?? row.record_date ?? null,
       total_all: Number(row.total_all ?? row.total ?? 0),
+      joined_at: row.joined_at ?? null,
     }))
     .sort((a, b) => Number(b.best_approach || 0) - Number(a.best_approach || 0))
 }

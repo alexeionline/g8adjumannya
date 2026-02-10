@@ -592,6 +592,7 @@ function createApiApp() {
       best_day_total: r.best_day_total,
       best_day_date: r.best_day_date,
       total_all: Number(r.total_all || 0),
+      joined_at: r.joined_at ?? null,
     }));
     return res.json({ rows: withDisplay });
   }));

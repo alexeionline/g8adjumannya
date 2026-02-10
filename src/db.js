@@ -502,7 +502,8 @@ async function getRecordsByChatV2(chatUserIds) {
         COALESCE(ba.best_approach, 0) AS best_approach,
         ba.best_approach_date,
         COALESCE(ot.total_all, 0) AS total_all,
-        u.username
+        u.username,
+        u.created_at::date AS joined_at
       FROM best_day bd
       LEFT JOIN best_approach ba ON ba.user_id = bd.user_id
       LEFT JOIN overall_totals ot ON ot.user_id = bd.user_id
