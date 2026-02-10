@@ -402,6 +402,34 @@ async function onChangeChat(event) {
         :on-submit="submitAdd"
       />
 
+      <Card class="stats-card">
+        <CardHeader>
+          <CardTitle>Статистика</CardTitle>
+        </CardHeader>
+        <CardContent class="stats-grid">
+          <article class="stat-item">
+            <p class="stat-key">Дней активности</p>
+            <p class="stat-value">{{ participationDays }}</p>
+          </article>
+          <article class="stat-item">
+            <p class="stat-key">Всего повторений</p>
+            <p class="stat-value">{{ totalPushups }}</p>
+          </article>
+          <article class="stat-item">
+            <p class="stat-key">Среднее</p>
+            <p class="stat-value">{{ averagePushups }}</p>
+          </article>
+          <article class="stat-item">
+            <p class="stat-key">Время суток</p>
+            <div class="stat-dayparts">
+              <p class="daypart-row"><span>Утро</span><strong>{{ dayPeriodShare.morning }}</strong></p>
+              <p class="daypart-row"><span>День</span><strong>{{ dayPeriodShare.day }}</strong></p>
+              <p class="daypart-row"><span>Вечер</span><strong>{{ dayPeriodShare.evening }}</strong></p>
+            </div>
+          </article>
+        </CardContent>
+      </Card>
+
       <Card class="chat-context-card">
         <CardHeader class="chat-context-header">
           <div>
@@ -455,34 +483,6 @@ async function onChangeChat(event) {
           :items="leaderboard"
         />
       </div>
-
-      <Card class="stats-card">
-        <CardHeader>
-          <CardTitle>Статистика</CardTitle>
-        </CardHeader>
-        <CardContent class="stats-grid">
-          <article class="stat-item">
-            <p class="stat-key">Дней активности</p>
-            <p class="stat-value">{{ participationDays }}</p>
-          </article>
-          <article class="stat-item">
-            <p class="stat-key">Всего повторений</p>
-            <p class="stat-value">{{ totalPushups }}</p>
-          </article>
-          <article class="stat-item">
-            <p class="stat-key">Среднее</p>
-            <p class="stat-value">{{ averagePushups }}</p>
-          </article>
-          <article class="stat-item">
-            <p class="stat-key">Время суток</p>
-            <div class="stat-dayparts">
-              <p class="daypart-row"><span>Утро</span><strong>{{ dayPeriodShare.morning }}</strong></p>
-              <p class="daypart-row"><span>День</span><strong>{{ dayPeriodShare.day }}</strong></p>
-              <p class="daypart-row"><span>Вечер</span><strong>{{ dayPeriodShare.evening }}</strong></p>
-            </div>
-          </article>
-        </CardContent>
-      </Card>
 
       <div ref="calendarAnchorRef" class="anchor-target">
         <CalendarView
