@@ -36,6 +36,7 @@ const { formatAddHeader, formatDisplayName } = require('../utils/format');
 const JWT_SECRET = process.env.JWT_SECRET || process.env.BOT_TOKEN || 'fallback-change-me';
 const JWT_EXPIRES_IN = '30d';
 const INIT_DATA_MAX_AGE_SEC = 24 * 60 * 60; // 24 hours
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 dayjs.extend(customParseFormat);
 const telegram = process.env.BOT_TOKEN ? new Telegram(process.env.BOT_TOKEN) : null;
@@ -144,7 +145,13 @@ function validateTelegramInitData(initData, botToken) {
   const dataCheckString = dataCheckArr.join('\n');
   const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
   const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-  if (computedHash !== hash) {
+  const expectedHash = String(hash).toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(expectedHash)) {
+    throw new Error('Invalid hash format');
+  }
+  const provided = Buffer.from(expectedHash, 'hex');
+  const computed = Buffer.from(computedHash, 'hex');
+  if (provided.length !== computed.length || !crypto.timingSafeEqual(provided, computed)) {
     throw new Error('Invalid signature');
   }
   const userStr = params.get('user');
@@ -153,19 +160,31 @@ function validateTelegramInitData(initData, botToken) {
   }
   let user;
   try {
-    user = JSON.parse(decodeURIComponent(userStr));
+    user = JSON.parse(userStr);
   } catch {
     throw new Error('Invalid user payload');
   }
-  if (!user || typeof user.id !== 'number') {
+  const parsedUserId = Number(user?.id);
+  if (!Number.isFinite(parsedUserId)) {
     throw new Error('Invalid user id');
   }
   return {
     user: {
-      id: user.id,
+      id: parsedUserId,
       username: user.username || null,
     },
   };
+}
+
+function parseRequiredChatId(rawChatId) {
+  if (rawChatId == null || rawChatId === '') {
+    return { error: 'chat_id is required' };
+  }
+  const value = Number(rawChatId);
+  if (!Number.isFinite(value)) {
+    return { error: 'chat_id must be a number' };
+  }
+  return { value };
 }
 
 function authV2Middleware(req, res, next) {
@@ -184,6 +203,32 @@ function authV2Middleware(req, res, next) {
   } catch {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+}
+
+function asyncRoute(handler) {
+  return (req, res, next) => {
+    return Promise.resolve(handler(req, res, next)).catch(next);
+  };
+}
+
+function createRateLimiter({ windowMs, max, keyFn }) {
+  const buckets = new Map();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = String(keyFn(req) || req.ip || 'global');
+    const bucket = buckets.get(key);
+    if (!bucket || now >= bucket.resetAt) {
+      buckets.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    if (bucket.count >= max) {
+      const retryAfterSec = Math.ceil((bucket.resetAt - now) / 1000);
+      res.set('Retry-After', String(Math.max(1, retryAfterSec)));
+      return res.status(429).json({ error: 'Too many requests' });
+    }
+    bucket.count += 1;
+    return next();
+  };
 }
 
 function createApiApp() {
@@ -411,8 +456,18 @@ function createApiApp() {
 
   // --- API v2 (JWT, user_id, daily_adds) ---
   const v2 = express.Router();
+  const authLimiter = createRateLimiter({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    max: 20,
+    keyFn: (req) => `auth:${req.ip || 'unknown'}`,
+  });
+  const addLimiter = createRateLimiter({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    max: 60,
+    keyFn: (req) => `add:${req.userId ?? req.ip ?? 'unknown'}`,
+  });
 
-  v2.post('/auth', async (req, res) => {
+  v2.post('/auth', authLimiter, asyncRoute(async (req, res) => {
     const initData = req.body?.init_data;
     if (!initData || typeof initData !== 'string') {
       return res.status(400).json({ error: 'init_data is required' });
@@ -432,9 +487,9 @@ function createApiApp() {
       console.error('v2 auth error:', err.message);
       return res.status(401).json({ error: 'Invalid init data' });
     }
-  });
+  }));
 
-  v2.post('/add', authV2Middleware, async (req, res) => {
+  v2.post('/add', authV2Middleware, addLimiter, asyncRoute(async (req, res) => {
     const userId = req.userId;
     const date = req.body.date
       ? dayjs(req.body.date, 'YYYY-MM-DD', true)
@@ -476,17 +531,14 @@ function createApiApp() {
       })),
       total,
     });
-  });
+  }));
 
-  v2.get('/status', authV2Middleware, async (req, res) => {
-    const chatId = req.query.chat_id;
-    if (chatId == null || chatId === '') {
-      return res.status(400).json({ error: 'chat_id is required' });
+  v2.get('/status', authV2Middleware, asyncRoute(async (req, res) => {
+    const parsedChatId = parseRequiredChatId(req.query.chat_id);
+    if (parsedChatId.error) {
+      return res.status(400).json({ error: parsedChatId.error });
     }
-    const chatIdNum = Number(chatId);
-    if (!Number.isFinite(chatIdNum)) {
-      return res.status(400).json({ error: 'chat_id must be a number' });
-    }
+    const chatIdNum = parsedChatId.value;
     const inChat = await isUserSharedInChat(chatIdNum, req.userId);
     if (!inChat) {
       return res.status(403).json({ error: 'no access to this chat' });
@@ -515,17 +567,14 @@ function createApiApp() {
       total: r.total,
     }));
     return res.json({ date: dateStr, rows: withDisplay });
-  });
+  }));
 
-  v2.get('/records', authV2Middleware, async (req, res) => {
-    const chatId = req.query.chat_id;
-    if (chatId == null || chatId === '') {
-      return res.status(400).json({ error: 'chat_id is required' });
+  v2.get('/records', authV2Middleware, asyncRoute(async (req, res) => {
+    const parsedChatId = parseRequiredChatId(req.query.chat_id);
+    if (parsedChatId.error) {
+      return res.status(400).json({ error: parsedChatId.error });
     }
-    const chatIdNum = Number(chatId);
-    if (!Number.isFinite(chatIdNum)) {
-      return res.status(400).json({ error: 'chat_id must be a number' });
-    }
+    const chatIdNum = parsedChatId.value;
     const inChat = await isUserSharedInChat(chatIdNum, req.userId);
     if (!inChat) {
       return res.status(403).json({ error: 'no access to this chat' });
@@ -540,18 +589,18 @@ function createApiApp() {
       best_day_date: r.best_day_date,
     }));
     return res.json({ rows: withDisplay });
-  });
+  }));
 
-  v2.get('/chats', authV2Middleware, async (req, res) => {
+  v2.get('/chats', authV2Middleware, asyncRoute(async (req, res) => {
     const chatIds = await getSharedChatsByUser(req.userId);
     const rows = await Promise.all(chatIds.map(async (chatId) => ({
       chat_id: chatId,
       title: await resolveChatTitle(chatId),
     })));
     return res.json({ rows });
-  });
+  }));
 
-  v2.get('/history', authV2Middleware, async (req, res) => {
+  v2.get('/history', authV2Middleware, asyncRoute(async (req, res) => {
     const requestedUserId = req.query.user_id != null ? Number(req.query.user_id) : req.userId;
     if (!Number.isFinite(requestedUserId)) {
       return res.status(400).json({ error: 'user_id must be a number' });
@@ -566,9 +615,9 @@ function createApiApp() {
       days[key] = Number(row.total);
     }
     return res.json({ user_id: requestedUserId, days });
-  });
+  }));
 
-  v2.get('/approaches', authV2Middleware, async (req, res) => {
+  v2.get('/approaches', authV2Middleware, asyncRoute(async (req, res) => {
     const dateStr = req.query.date;
     if (!dateStr) {
       return res.status(400).json({ error: 'date is required' });
@@ -603,9 +652,9 @@ function createApiApp() {
         migrated: a.migrated,
       }))
     );
-  });
+  }));
 
-  v2.patch('/approaches/:id', authV2Middleware, async (req, res) => {
+  v2.patch('/approaches/:id', authV2Middleware, asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
       return res.status(400).json({ error: 'invalid id' });
@@ -618,7 +667,7 @@ function createApiApp() {
     if (!approach) {
       return res.status(404).json({ error: 'approach not found' });
     }
-    if (approach.user_id !== req.userId) {
+    if (Number(approach.user_id) !== req.userId) {
       return res.status(403).json({ error: 'access denied' });
     }
     const updated = await updateApproachCount(id, req.userId, count);
@@ -633,9 +682,9 @@ function createApiApp() {
       },
       total,
     });
-  });
+  }));
 
-  v2.delete('/approaches/:id', authV2Middleware, async (req, res) => {
+  v2.delete('/approaches/:id', authV2Middleware, asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
       return res.status(400).json({ error: 'invalid id' });
@@ -644,15 +693,23 @@ function createApiApp() {
     if (!approach) {
       return res.status(404).json({ error: 'approach not found' });
     }
-    if (approach.user_id !== req.userId) {
+    if (Number(approach.user_id) !== req.userId) {
       return res.status(403).json({ error: 'access denied' });
     }
     await deleteApproach(id, req.userId);
     const total = await getTotalForUserDateV2(req.userId, approach.date);
     return res.json({ total });
-  });
+  }));
 
   app.use('/api/v2', v2);
+
+  app.use((err, req, res, next) => {
+    if (res.headersSent) {
+      return next(err);
+    }
+    console.error('API error:', err?.message || err);
+    return res.status(500).json({ error: 'Internal server error' });
+  });
 
   app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));

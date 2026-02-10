@@ -29,6 +29,11 @@ const { createHideHandler } = require('./handlers/hide');
 const { createStatusHandler } = require('./handlers/status');
 const { createDeletionHelpers } = require('./utils/deletionQueue');
 const {
+  createCommandCleanupMiddleware,
+  dispatchPlainText,
+  registerCommandHandler,
+} = require('./bot/dispatcher');
+const {
   formatAddHeader,
   formatDisplayName,
   formatIndexEmoji,
@@ -39,14 +44,6 @@ const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES, FIRST_100_MESSAGE, HELP_TEXT } = 
 
 dayjs.extend(customParseFormat);
 const JWT_SECRET = process.env.JWT_SECRET || process.env.BOT_TOKEN || 'fallback-change-me';
-
-/** Команда выполняется только если она первое слово в сообщении (чтобы не срабатывало на "отправь /add 10"). */
-function isCommandFirstInMessage(text, commandName) {
-  if (!text || typeof text !== 'string') return false;
-  const t = text.trim();
-  const re = new RegExp(`^/${commandName}(@\\w+)?(\\s|$)`);
-  return re.test(t);
-}
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -132,35 +129,19 @@ const handleApiToken = createApiTokenHandler({
 });
 
 bot.start((ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'start')) return;
+  if (!(ctx.message?.text || '').trim().startsWith('/start')) return;
   sendEphemeral(ctx, COMMANDS_TEXT);
   handleApiToken(ctx);
 });
 
-bot.use((ctx, next) => {
-  const msg = ctx.message;
-  const text = msg && msg.text;
-  const isForwarded =
-    msg && (msg.forward_from || msg.forward_from_chat || msg.forward_origin);
-  if (isForwarded && text && text.trim().startsWith('/')) {
-    return;
-  }
+bot.use(
+  createCommandCleanupMiddleware({
+    scheduleDeleteMessage,
+    shortTtlMs: TEN_SECONDS_MS,
+  })
+);
 
-  if (text && text.trim().startsWith('/')) {
-    const command = text.trim().split(/\s+/)[0].slice(1);
-    const commandName = command.split('@')[0].toLowerCase();
-    if (commandName === 'status' || commandName === 'record') {
-      scheduleDeleteMessage(ctx, TEN_SECONDS_MS);
-    } else if (commandName !== 'add') {
-      scheduleDeleteMessage(ctx);
-    }
-  }
-
-  return next();
-});
-
-bot.command('add', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'add')) return;
+registerCommandHandler(bot, 'add', async (ctx) => {
   const parsed = parseAdd(ctx.message && ctx.message.text);
   if (parsed) {
     return handleAdd(ctx, parsed);
@@ -176,8 +157,7 @@ bot.command('add', async (ctx) => {
   };
 });
 
-bot.command('cancel', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'cancel')) return;
+registerCommandHandler(bot, 'cancel', async (ctx) => {
   if (!ctx.session || !ctx.session.waitingForAdd) {
     return sendEphemeral(ctx, ERRORS.WAITING_NONE);
   }
@@ -188,8 +168,7 @@ bot.command('cancel', async (ctx) => {
   return sendEphemeral(ctx, ERRORS.WAITING_CANCELLED);
 });
 
-bot.command('status', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'status')) return;
+registerCommandHandler(bot, 'status', async (ctx) => {
   const parsed = parseStatusDate(ctx.message && ctx.message.text);
   if (!parsed) {
     return sendEphemeral(ctx, ERRORS.STATUS_FORMAT);
@@ -198,33 +177,17 @@ bot.command('status', async (ctx) => {
   return handleStatus(ctx, parsed);
 });
 
-bot.command('record', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'record')) return;
-  return handleRecord(ctx);
-});
+registerCommandHandler(bot, 'record', async (ctx) => handleRecord(ctx));
 
-bot.command('force', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'force')) return;
-  return handleForce(ctx);
-});
+registerCommandHandler(bot, 'force', async (ctx) => handleForce(ctx));
 
-bot.command('share', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'share')) return;
-  return handleShare(ctx);
-});
+registerCommandHandler(bot, 'share', async (ctx) => handleShare(ctx));
 
-bot.command('hide', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'hide')) return;
-  return handleHide(ctx);
-});
+registerCommandHandler(bot, 'hide', async (ctx) => handleHide(ctx));
 
-bot.command('help', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'help')) return;
-  return sendEphemeral(ctx, HELP_TEXT);
-});
+registerCommandHandler(bot, 'help', async (ctx) => sendEphemeral(ctx, HELP_TEXT));
 
-bot.command('web', async (ctx) => {
-  if (!isCommandFirstInMessage(ctx.message?.text, 'web')) return;
+registerCommandHandler(bot, 'web', async (ctx) => {
   const url = process.env.WEB_APP_URL;
   if (!url) {
     return sendEphemeral(ctx, ERRORS.WEB_MISSING);
@@ -276,51 +239,17 @@ bot.command('web', async (ctx) => {
 });
 
 bot.on('text', async (ctx) => {
-  const text = ctx.message && ctx.message.text;
-  if (!text || text.trim().startsWith('/')) {
-    return;
-  }
-
-  const reply = ctx.message && ctx.message.reply_to_message;
-  const isReplyToAddPrompt =
-    reply &&
-    reply.from &&
-    ctx.botInfo &&
-    reply.from.id === ctx.botInfo.id &&
-    typeof reply.text === 'string' &&
-    reply.text.startsWith('Сколько отжиманий добавить');
-
-  if ((ctx.session && ctx.session.waitingForAdd) || isReplyToAddPrompt) {
-    if (ctx.session.waitingForAddUntil && Date.now() > ctx.session.waitingForAddUntil) {
-      ctx.session.waitingForAdd = false;
-      delete ctx.session.waitingForAddUntil;
-
-      return sendEphemeral(ctx, ERRORS.WAITING_EXPIRED);
-    }
-
-    const parsed = parseAddNumbers(text);
-    if (!parsed) {
-      return sendEphemeral(ctx, ERRORS.ENTER_NUMBER);
-    }
-
-    ctx.session.waitingForAdd = false;
-    delete ctx.session.waitingForAddUntil;
-    return handleAdd(ctx, parsed);
-  }
-
-  if (parseRecord(text)) {
-    return handleRecord(ctx);
-  }
-
-  const addParsed = parseAdd(text);
-  if (addParsed) {
-    return handleAdd(ctx, addParsed);
-  }
-
-  const parsed = parseStatusDate(text);
-  if (parsed) {
-    return handleStatus(ctx, parsed);
-  }
+  return dispatchPlainText(ctx, {
+    parseAdd,
+    parseAddNumbers,
+    parseRecord,
+    parseStatusDate,
+    handleAdd,
+    handleRecord,
+    handleStatus,
+    sendEphemeral,
+    errors: ERRORS,
+  });
 });
 
 async function startBot(options = {}) {

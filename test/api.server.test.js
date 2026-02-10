@@ -100,6 +100,7 @@ async function invokeRoute(app, { method, path, headers = {}, query = {}, body =
   const req = { headers, query, body, params, method: method.toUpperCase() };
   let statusCode = 200;
   let payload = null;
+  const responseHeaders = {};
 
   const res = {
     status(code) {
@@ -110,23 +111,29 @@ async function invokeRoute(app, { method, path, headers = {}, query = {}, body =
       payload = data;
       return this;
     },
+    set(name, value) {
+      responseHeaders[String(name).toLowerCase()] = String(value);
+      return this;
+    },
   };
 
   let idx = 0;
   async function run() {
     if (idx >= handlers.length) return;
     const handler = handlers[idx++];
+    let continueChain = false;
     await new Promise((resolve, reject) => {
       let settled = false;
-      const done = (err) => {
+      const done = (err, fromNext = false) => {
         if (settled) return;
         settled = true;
+        continueChain = fromNext;
         if (err) reject(err);
         else resolve();
       };
 
       try {
-        const maybe = handler(req, res, done);
+        const maybe = handler(req, res, (err) => done(err, true));
         if (maybe && typeof maybe.then === 'function') {
           maybe.then(() => done()).catch(done);
         } else if (handler.length < 3) {
@@ -140,11 +147,13 @@ async function invokeRoute(app, { method, path, headers = {}, query = {}, body =
         done(err);
       }
     });
-    await run();
+    if (continueChain) {
+      await run();
+    }
   }
 
   await run();
-  return { statusCode, payload };
+  return { statusCode, payload, headers: responseHeaders };
 }
 
 function createInitData(botToken, { userId = 42, username = 'alex', authDate = Math.floor(Date.now() / 1000) } = {}) {
@@ -371,6 +380,24 @@ test('v2 /auth validates init_data and returns jwt token', async () => {
   }
 });
 
+test('v2 /auth accepts numeric user id in string form', async () => {
+  const env = { JWT_SECRET: 's1', BOT_TOKEN: 'bot-token' };
+  const { app, restore } = loadApiAppWithDbMock(buildDbMock(), env);
+
+  try {
+    const initData = createInitData(env.BOT_TOKEN, { userId: '99', username: 'neo' });
+    const res = await invokeRoute(app, {
+      method: 'post',
+      path: '/api/v2/auth',
+      body: { init_data: initData },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.payload.user_id, 99);
+  } finally {
+    restore();
+  }
+});
+
 test('v2 /auth rejects missing and stale init_data', async () => {
   const env = { JWT_SECRET: 's1', BOT_TOKEN: 'bot-token' };
   const { app, restore } = loadApiAppWithDbMock(buildDbMock(), env);
@@ -391,6 +418,45 @@ test('v2 /auth rejects missing and stale init_data', async () => {
       body: { init_data: staleInitData },
     });
     assert.equal(stale.statusCode, 401);
+  } finally {
+    restore();
+  }
+});
+
+test('v2 /auth rejects malformed hash', async () => {
+  const env = { JWT_SECRET: 's1', BOT_TOKEN: 'bot-token' };
+  const { app, restore } = loadApiAppWithDbMock(buildDbMock(), env);
+
+  try {
+    const params = new URLSearchParams(createInitData(env.BOT_TOKEN));
+    params.set('hash', 'zzz');
+    const res = await invokeRoute(app, {
+      method: 'post',
+      path: '/api/v2/auth',
+      body: { init_data: params.toString() },
+    });
+    assert.equal(res.statusCode, 401);
+  } finally {
+    restore();
+  }
+});
+
+test('v2 /auth applies rate limiting', async () => {
+  const env = { JWT_SECRET: 's1', BOT_TOKEN: 'bot-token' };
+  const { app, restore } = loadApiAppWithDbMock(buildDbMock(), env);
+
+  try {
+    let last = null;
+    for (let i = 0; i < 21; i += 1) {
+      last = await invokeRoute(app, {
+        method: 'post',
+        path: '/api/v2/auth',
+        body: {},
+      });
+    }
+    assert.equal(last.statusCode, 429);
+    assert.equal(last.payload.error, 'Too many requests');
+    assert.equal(typeof last.headers['retry-after'], 'string');
   } finally {
     restore();
   }
@@ -456,6 +522,34 @@ test('v2 /add validates payload and supports count/counts forms', async () => {
   }
 });
 
+test('v2 /add applies rate limiting per user', async () => {
+  const env = { JWT_SECRET: 's1', BOT_TOKEN: 'bot-token' };
+  const token = makeV2Token(7, env.JWT_SECRET);
+  const dbMock = buildDbMock({
+    insertApproaches: async (userId, date, counts) =>
+      counts.map((count, idx) => ({ id: idx + 1, user_id: userId, date, count, created_at: 'x' })),
+    getTotalForUserDateV2: async () => 10,
+  });
+
+  const { app, restore } = loadApiAppWithDbMock(dbMock, env);
+  try {
+    let last = null;
+    for (let i = 0; i < 61; i += 1) {
+      last = await invokeRoute(app, {
+        method: 'post',
+        path: '/api/v2/add',
+        headers: { authorization: `Bearer ${token}` },
+        body: { count: 1, date: '2026-02-10' },
+      });
+    }
+    assert.equal(last.statusCode, 429);
+    assert.equal(last.payload.error, 'Too many requests');
+    assert.equal(typeof last.headers['retry-after'], 'string');
+  } finally {
+    restore();
+  }
+});
+
 test('v2 /status validates access, date and returns mapped rows', async () => {
   const env = { JWT_SECRET: 's1', BOT_TOKEN: 'bot-token' };
   const token = makeV2Token(7, env.JWT_SECRET);
@@ -489,6 +583,14 @@ test('v2 /status validates access, date and returns mapped rows', async () => {
       query: { chat_id: '-1001', date: '2026-99-99' },
     });
     assert.equal(badDate.statusCode, 400);
+
+    const badChatType = await invokeRoute(app, {
+      method: 'get',
+      path: '/api/v2/status',
+      headers: { authorization: `Bearer ${token}` },
+      query: { chat_id: 'oops' },
+    });
+    assert.equal(badChatType.statusCode, 400);
 
     const denied = await invokeRoute(app, {
       method: 'get',
@@ -672,7 +774,7 @@ test('v2 patch/delete approaches enforce ownership and return total', async () =
   const dbMock = buildDbMock({
     getApproachById: async (id) => {
       if (id === 1) return { id: 1, user_id: 8, date: '2026-02-10' };
-      if (id === 2) return { id: 2, user_id: 7, date: '2026-02-10' };
+      if (id === 2) return { id: 2, user_id: '7', date: '2026-02-10' };
       return null;
     },
     updateApproachCount: async (id, userId, count) => {

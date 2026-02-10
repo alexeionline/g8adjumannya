@@ -489,19 +489,17 @@ async function insertApproaches(userId, date, counts) {
     return [];
   }
   const now = new Date().toISOString();
-  const rows = [];
-  for (const count of counts) {
-    const result = await pool.query(
-      `
-        INSERT INTO daily_adds (user_id, date, count, created_at, migrated)
-        VALUES ($1, $2, $3, $4, FALSE)
-        RETURNING id, user_id, date, count, created_at
-      `,
-      [userId, date, count, now]
-    );
-    rows.push(result.rows[0]);
-  }
-  return rows;
+  const result = await pool.query(
+    `
+      INSERT INTO daily_adds (user_id, date, count, created_at, migrated)
+      SELECT $1, $2, c.count, $4, FALSE
+      FROM UNNEST($3::int[]) WITH ORDINALITY AS c(count, ord)
+      ORDER BY c.ord
+      RETURNING id, user_id, date, count, created_at
+    `,
+    [userId, date, counts, now]
+  );
+  return result.rows;
 }
 
 async function getTotalForUserDateV2(userId, date) {
