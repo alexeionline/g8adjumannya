@@ -13,6 +13,7 @@ const {
   getUserHistory,
   getUserById,
   getApproachesCountsByChatAndDate,
+  getChatMeta,
   getSharedChatsByUser,
   getSharedUserIdsByChat,
   getApproachById,
@@ -28,6 +29,7 @@ const {
   deleteApproach,
   updateApproachCount,
   upsertUser,
+  upsertChatMeta,
   upsertUserV2,
 } = require('../db');
 const { formatAddHeader, formatDisplayName } = require('../utils/format');
@@ -38,6 +40,7 @@ const INIT_DATA_MAX_AGE_SEC = 24 * 60 * 60; // 24 hours
 
 dayjs.extend(customParseFormat);
 const telegram = process.env.BOT_TOKEN ? new Telegram(process.env.BOT_TOKEN) : null;
+const CHAT_META_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function normalizeUser(userId, user) {
   if (!user) {
@@ -59,6 +62,32 @@ function notifyAddInChat(chatId, user, delta, total) {
   const header = formatAddHeader(name);
   const message = `${header} +${delta} / Всего: ${total}`;
   telegram.sendMessage(chatId, message).catch(() => {});
+}
+
+async function resolveChatTitle(chatId) {
+  const fallback = `Chat ${chatId}`;
+  const cached = await getChatMeta(chatId).catch(() => null);
+  const cachedTitle = cached?.title || null;
+  const isFresh = cached?.updated_at
+    ? Date.now() - new Date(cached.updated_at).getTime() < CHAT_META_TTL_MS
+    : false;
+
+  if (cachedTitle && isFresh) {
+    return cachedTitle;
+  }
+
+  if (!telegram) {
+    return cachedTitle || fallback;
+  }
+
+  try {
+    const chat = await telegram.getChat(chatId);
+    const title = chat?.title || chat?.username || cachedTitle || fallback;
+    await upsertChatMeta(chatId, title).catch(() => {});
+    return title;
+  } catch {
+    return cachedTitle || fallback;
+  }
 }
 
 async function authMiddleware(req, res, next) {
@@ -319,8 +348,9 @@ function createApiApp() {
 
   // v1 compatibility: token is chat-bound, so return current chat only.
   app.get('/chats', authMiddleware, async (req, res) => {
+    const title = await resolveChatTitle(req.chatId);
     return res.json({
-      rows: [{ chat_id: req.chatId, title: `Chat ${req.chatId}` }],
+      rows: [{ chat_id: req.chatId, title }],
     });
   });
 
@@ -459,10 +489,10 @@ function createApiApp() {
 
   v2.get('/chats', authV2Middleware, async (req, res) => {
     const chatIds = await getSharedChatsByUser(req.userId);
-    const rows = chatIds.map((chatId) => ({
+    const rows = await Promise.all(chatIds.map(async (chatId) => ({
       chat_id: chatId,
-      title: `Chat ${chatId}`,
-    }));
+      title: await resolveChatTitle(chatId),
+    })));
     return res.json({ rows });
   });
 

@@ -41,6 +41,12 @@ async function initDb() {
         FOREIGN KEY (user_id) REFERENCES users (user_id)
       );
 
+      CREATE TABLE IF NOT EXISTS chat_meta (
+        chat_id BIGINT PRIMARY KEY,
+        title TEXT,
+        updated_at TIMESTAMPTZ NOT NULL
+      );
+
       CREATE TABLE IF NOT EXISTS records (
         chat_id BIGINT NOT NULL,
         user_id BIGINT NOT NULL,
@@ -87,6 +93,11 @@ async function initDb() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS shared_chats_chat_id_idx
       ON shared_chats (chat_id);
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS chat_meta_updated_at_idx
+      ON chat_meta (updated_at);
     `);
 
     await pool.query(`
@@ -593,6 +604,33 @@ async function getSharedChatsByUser(userId) {
   return result.rows.map((row) => Number(row.chat_id));
 }
 
+async function getChatMeta(chatId) {
+  const result = await pool.query(
+    `
+      SELECT chat_id, title, updated_at
+      FROM chat_meta
+      WHERE chat_id = $1
+      LIMIT 1
+    `,
+    [chatId]
+  );
+  return result.rows[0] || null;
+}
+
+async function upsertChatMeta(chatId, title) {
+  const now = new Date().toISOString();
+  await pool.query(
+    `
+      INSERT INTO chat_meta (chat_id, title, updated_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (chat_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        updated_at = EXCLUDED.updated_at
+    `,
+    [chatId, title ?? null, now]
+  );
+}
+
 async function resolveWriteChatId(chatId, userId) {
   const isShared = await isUserSharedInChat(chatId, userId);
   if (!isShared) {
@@ -927,6 +965,8 @@ module.exports = {
   getCanonicalSharedChatId,
   getSharedUserIdsByChat,
   getSharedChatsByUser,
+  getChatMeta,
+  upsertChatMeta,
   isUserSharedInChat,
   resolveWriteChatId,
   getUserById,
