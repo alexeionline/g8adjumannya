@@ -558,13 +558,15 @@ function createApiApp() {
       .map((r) => {
         const approaches = approachesMap[r.user_id] || [];
         const total = approaches.reduce((s, a) => s + (Number(a.count) || 0), 0);
-        return { user_id: r.user_id, username: r.username, total };
+        return { user_id: r.user_id, username: r.username, total, approaches };
       })
       .filter((r) => r.total > 0);
     const withDisplay = rows.map((r) => ({
       user_id: r.user_id,
       display_name: getDisplayNameV2(r),
+      username: r.username ?? null,
       total: r.total,
+      approaches: r.approaches,
     }));
     return res.json({ date: dateStr, rows: withDisplay });
   }));

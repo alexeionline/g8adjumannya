@@ -607,7 +607,13 @@ test('v2 /status validates access, date and returns mapped rows', async () => {
       query: { chat_id: '-1001', date: '2026-02-10' },
     });
     assert.equal(ok.statusCode, 200);
-    assert.deepEqual(ok.payload.rows, [{ user_id: 7, display_name: '@neo', total: 15 }]);
+    assert.deepEqual(ok.payload.rows, [{
+      user_id: 7,
+      display_name: '@neo',
+      username: 'neo',
+      total: 15,
+      approaches: [{ count: 15 }],
+    }]);
   } finally {
     restore();
   }
