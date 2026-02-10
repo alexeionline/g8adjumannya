@@ -476,9 +476,9 @@ async function onChangeChat(event) {
           <article class="stat-item">
             <p class="stat-key">Время суток</p>
             <div class="stat-dayparts">
-              <p class="daypart-row"><span>Утро (до 12)</span><strong>{{ dayPeriodShare.morning }}</strong></p>
-              <p class="daypart-row"><span>День (до 18)</span><strong>{{ dayPeriodShare.day }}</strong></p>
-              <p class="daypart-row"><span>Вечер (до 23:59)</span><strong>{{ dayPeriodShare.evening }}</strong></p>
+              <p class="daypart-row"><span>Утро</span><strong>{{ dayPeriodShare.morning }}</strong></p>
+              <p class="daypart-row"><span>День</span><strong>{{ dayPeriodShare.day }}</strong></p>
+              <p class="daypart-row"><span>Вечер</span><strong>{{ dayPeriodShare.evening }}</strong></p>
             </div>
           </article>
         </CardContent>
