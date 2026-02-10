@@ -232,7 +232,7 @@ const participationDays = computed(() =>
   Object.values(data.historyDays || {}).filter((count) => Number(count) > 0).length
 )
 const closedGoalDays = computed(() =>
-  Object.values(data.historyDays || {}).filter((count) => Number(count) > 100).length
+  Object.values(data.historyDays || {}).filter((count) => Number(count) >= 100).length
 )
 const closedGoalDaysPercent = computed(() => {
   if (!participationDays.value) return '0%'
@@ -461,10 +461,13 @@ async function onChangeChat(event) {
             <p class="stat-value">{{ averagePerApproach }}</p>
           </article>
           <article class="stat-item">
-            <div class="stat-dayparts">
-              <p class="daypart-row"><span>Утро</span><strong>{{ dayPeriodShare.morning }}</strong></p>
-              <p class="daypart-row"><span>День</span><strong>{{ dayPeriodShare.day }}</strong></p>
-              <p class="daypart-row"><span>Вечер</span><strong>{{ dayPeriodShare.evening }}</strong></p>
+            <div class="stat-dayparts-grid">
+              <span class="daypart-head">Утро</span>
+              <span class="daypart-head">День</span>
+              <span class="daypart-head">Вечер</span>
+              <strong class="daypart-val">{{ dayPeriodShare.morning }}</strong>
+              <strong class="daypart-val">{{ dayPeriodShare.day }}</strong>
+              <strong class="daypart-val">{{ dayPeriodShare.evening }}</strong>
             </div>
           </article>
         </CardContent>
@@ -850,25 +853,28 @@ async function onChangeChat(event) {
   font-size: 0.86rem;
 }
 
-.stat-dayparts {
-  margin-top: 0.28rem;
-  display: grid;
-  gap: 0.16rem;
-}
-
-.daypart-row {
-  margin: 0;
+.stat-dayparts-grid {
+  margin-top: 0.22rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem;
-  font-size: 0.69rem;
-  color: var(--muted-foreground);
+  gap: 0.24rem 0.4rem;
 }
 
-.daypart-row strong {
+.daypart-head {
+  width: calc((100% - 0.8rem) / 3);
+  text-align: center;
+  font-size: 0.66rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.daypart-val {
+  width: calc((100% - 0.8rem) / 3);
+  text-align: center;
   color: var(--foreground-strong);
-  font-size: 0.75rem;
+  font-size: 0.86rem;
 }
 
 @media (min-width: 620px) {
