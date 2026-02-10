@@ -13,6 +13,7 @@ const {
   getUserHistory,
   getUserById,
   getApproachesCountsByChatAndDate,
+  getSharedChatsByUser,
   getSharedUserIdsByChat,
   getApproachById,
   getApproachesByUserDate,
@@ -316,6 +317,13 @@ function createApiApp() {
     res.json({ user_id: userId, chat_id: req.chatId, days });
   });
 
+  // v1 compatibility: token is chat-bound, so return current chat only.
+  app.get('/chats', authMiddleware, async (req, res) => {
+    return res.json({
+      rows: [{ chat_id: req.chatId, title: `Chat ${req.chatId}` }],
+    });
+  });
+
   // --- API v2 (JWT, user_id, daily_adds) ---
   const v2 = express.Router();
 
@@ -447,6 +455,15 @@ function createApiApp() {
       best_day_date: r.best_day_date,
     }));
     return res.json({ rows: withDisplay });
+  });
+
+  v2.get('/chats', authV2Middleware, async (req, res) => {
+    const chatIds = await getSharedChatsByUser(req.userId);
+    const rows = chatIds.map((chatId) => ({
+      chat_id: chatId,
+      title: `Chat ${chatId}`,
+    }));
+    return res.json({ rows });
   });
 
   v2.get('/history', authV2Middleware, async (req, res) => {

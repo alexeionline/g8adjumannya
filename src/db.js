@@ -580,6 +580,19 @@ async function isUserSharedInChat(chatId, userId) {
   return result.rowCount > 0;
 }
 
+async function getSharedChatsByUser(userId) {
+  const result = await pool.query(
+    `
+      SELECT chat_id
+      FROM shared_chats
+      WHERE user_id = $1
+      ORDER BY chat_id ASC
+    `,
+    [userId]
+  );
+  return result.rows.map((row) => Number(row.chat_id));
+}
+
 async function resolveWriteChatId(chatId, userId) {
   const isShared = await isUserSharedInChat(chatId, userId);
   if (!isShared) {
@@ -913,6 +926,7 @@ module.exports = {
   removeSharedChat,
   getCanonicalSharedChatId,
   getSharedUserIdsByChat,
+  getSharedChatsByUser,
   isUserSharedInChat,
   resolveWriteChatId,
   getUserById,

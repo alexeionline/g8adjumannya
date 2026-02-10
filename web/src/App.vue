@@ -31,15 +31,23 @@ onMounted(async () => {
 
   const params = new URLSearchParams(window.location.search)
   const token = params.get('token')
+  const tokenV2 = params.get('v2_token')
   const userId = params.get('user_id')
   const apiBase = params.get('api_base')
+  const apiBaseV2 = params.get('api_base_v2')
   const chatId = params.get('chat_id')
 
-  if (apiBase) {
-    auth.apiBase = apiBase
-  }
-  if (token) {
-    auth.token = token
+  // Prefer v2 credentials when provided; keep v1 fallback for backward compatibility.
+  if (tokenV2) {
+    auth.token = tokenV2
+    auth.apiBase = apiBaseV2 || `${window.location.origin}/api/v2`
+  } else {
+    if (apiBase) {
+      auth.apiBase = apiBase
+    }
+    if (token) {
+      auth.token = token
+    }
   }
   if (userId) {
     auth.defaultUserId = userId
@@ -49,7 +57,7 @@ onMounted(async () => {
     data.selectedChatId = chatId
   }
 
-  if (token || userId || apiBase || chatId) {
+  if (token || tokenV2 || userId || apiBase || apiBaseV2 || chatId) {
     auth.save()
     window.history.replaceState({}, document.title, window.location.pathname)
   }

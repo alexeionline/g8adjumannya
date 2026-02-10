@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const { Telegraf, session } = require('telegraf');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
@@ -37,6 +38,7 @@ const { createParsers } = require('./utils/parse');
 const { COMMANDS_TEXT, ERRORS, FORCE_MESSAGES, FIRST_100_MESSAGE, HELP_TEXT } = require('./constants/text');
 
 dayjs.extend(customParseFormat);
+const JWT_SECRET = process.env.JWT_SECRET || process.env.BOT_TOKEN || 'fallback-change-me';
 
 /** Команда выполняется только если она первое слово в сообщении (чтобы не срабатывало на "отправь /add 10"). */
 function isCommandFirstInMessage(text, commandName) {
@@ -237,8 +239,12 @@ bot.command('web', async (ctx) => {
   const webUrl = new URL(url);
   webUrl.searchParams.set('token', token);
   webUrl.searchParams.set('api_base', webUrl.origin);
+  webUrl.searchParams.set('chat_id', String(ctx.chat.id));
   if (ctx.from && ctx.from.id) {
     webUrl.searchParams.set('user_id', String(ctx.from.id));
+    const v2Token = jwt.sign({ user_id: ctx.from.id }, JWT_SECRET, { expiresIn: '30d' });
+    webUrl.searchParams.set('v2_token', v2Token);
+    webUrl.searchParams.set('api_base_v2', `${webUrl.origin}/api/v2`);
   }
 
   const isPrivate = ctx.chat && ctx.chat.type === 'private';
