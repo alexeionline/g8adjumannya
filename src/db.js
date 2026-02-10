@@ -357,18 +357,6 @@ async function addCount({ chatId, userId, date, delta, createdAt }) {
   return result.rows[0] ? result.rows[0].count : 0;
 }
 
-async function getTotalCountForUserDate(userId, date) {
-  const result = await pool.query(
-    `
-      SELECT COALESCE(SUM(count), 0) AS total
-      FROM daily_counts
-      WHERE user_id = $1 AND date = $2
-    `,
-    [userId, date]
-  );
-  return Number(result.rows[0]?.total ?? 0);
-}
-
 async function updateRecord({ chatId, userId, count, date }) {
   const now = new Date().toISOString();
   await pool.query(
@@ -552,19 +540,6 @@ async function removeSharedChat(chatId, userId) {
   );
 }
 
-async function getSharedChatIds(userId) {
-  const result = await pool.query(
-    `
-      SELECT chat_id
-      FROM shared_chats
-      WHERE user_id = $1
-    `,
-    [userId]
-  );
-
-  return result.rows.map((row) => row.chat_id);
-}
-
 async function getCanonicalSharedChatId(userId) {
   const result = await pool.query(
     `
@@ -669,19 +644,6 @@ async function getRecordsByChat(chatId) {
   );
 
   return result.rows;
-}
-
-async function getChatRecord(chatId) {
-  const records = await getRecordsByChat(chatId);
-  if (!records.length) {
-    return [];
-  }
-
-  const maxCount = records.reduce(
-    (current, row) => Math.max(current, Number(row.record_count || 0)),
-    0
-  );
-  return records.filter((row) => Number(row.record_count || 0) === maxCount);
 }
 
 async function createApiToken(chatId, token) {
@@ -949,15 +911,12 @@ module.exports = {
   hasUserReached100,
   addSharedChat,
   removeSharedChat,
-  getSharedChatIds,
   getCanonicalSharedChatId,
   getSharedUserIdsByChat,
   isUserSharedInChat,
   resolveWriteChatId,
   getUserById,
   getRecordsByChat,
-  getChatRecord,
-  getTotalCountForUserDate,
   createApiToken,
   getChatIdByToken,
   getApiTokenByChat,
