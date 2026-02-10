@@ -40,12 +40,13 @@ export async function fetchHistory(auth, userId) {
   return data
 }
 
-export async function fetchApproaches(auth, date, dateTo) {
+export async function fetchApproaches(auth, date, dateTo, userId) {
   requireAuth(auth)
   const client = createApiClient(auth)
   const params = {}
   if (date) params.date = date
   if (dateTo) params.date_to = dateTo
+  if (userId != null && userId !== '') params.user_id = userId
   const { data } = await client.get('/approaches', { params })
   return data
 }

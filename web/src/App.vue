@@ -345,7 +345,6 @@ async function onChangeChat(event) {
       <Card class="hero-card">
         <CardHeader class="hero-top">
           <div>
-            <p class="hero-kicker">Главный экран</p>
             <CardTitle class="hero-title">Панель контроля за сегодня</CardTitle>
           </div>
         </CardHeader>
@@ -537,16 +536,7 @@ async function onChangeChat(event) {
   gap: 0.9rem;
 }
 
-.hero-kicker {
-  margin: 0;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-foreground);
-}
-
 .hero-title {
-  margin-top: 0.24rem;
   font-family: var(--font-display);
   letter-spacing: -0.02em;
   color: var(--foreground-strong);

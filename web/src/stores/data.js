@@ -662,7 +662,7 @@ export const useDataStore = defineStore('data', {
         const startDate = new Date()
         startDate.setDate(startDate.getDate() - 365)
         const start = formatDateKey(startDate)
-        const rows = await fetchApproaches(auth, start, end)
+        const rows = await fetchApproaches(auth, start, end, userId)
         const map = {}
         ;(rows || []).forEach((entry) => {
           if (entry?.migrated) return

@@ -65,10 +65,9 @@ const quickAdds = [5, 10, 15, 20, 25, 30]
 }
 
 .add-block-title {
-  font-size: 0.86rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  color: var(--foreground-strong);
 }
 
 .add-block-content {

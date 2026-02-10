@@ -346,6 +346,56 @@ function createApiApp() {
     res.json({ user_id: userId, chat_id: req.chatId, days });
   });
 
+  app.get('/approaches', authMiddleware, async (req, res) => {
+    const userId = Number(req.query.user_id);
+    if (!Number.isFinite(userId)) {
+      return res.status(400).json({ error: 'user_id is required' });
+    }
+
+    const chatUserIds = await getSharedUserIdsByChat(req.chatId);
+    const chatUserIdsNum = chatUserIds.map((uid) => Number(uid));
+    if (!chatUserIdsNum.includes(userId)) {
+      return res.status(403).json({ error: 'no access to this user' });
+    }
+
+    const dateStr = req.query.date;
+    if (!dateStr) {
+      return res.status(400).json({ error: 'date is required' });
+    }
+    const date = dayjs(dateStr, 'YYYY-MM-DD', true);
+    if (!date.isValid()) {
+      return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    }
+
+    const dateToStr = req.query.date_to;
+    let dateTo = null;
+    if (dateToStr) {
+      dateTo = dayjs(dateToStr, 'YYYY-MM-DD', true);
+      if (!dateTo.isValid()) {
+        return res.status(400).json({ error: 'date_to must be YYYY-MM-DD' });
+      }
+      if (dateTo.isBefore(date)) {
+        return res.status(400).json({ error: 'date_to must be >= date' });
+      }
+      if (dateTo.diff(date, 'day') > 365) {
+        return res.status(400).json({ error: 'date range must not exceed 365 days' });
+      }
+      dateTo = dateTo.format('YYYY-MM-DD');
+    }
+
+    const list = await getApproachesByUserDate(userId, date.format('YYYY-MM-DD'), dateTo);
+    return res.json(
+      list.map((a) => ({
+        id: a.id,
+        user_id: a.user_id,
+        date: a.date,
+        count: a.count,
+        created_at: a.created_at,
+        migrated: a.migrated,
+      }))
+    );
+  });
+
   // v1 compatibility: token is chat-bound, so return current chat only.
   app.get('/chats', authMiddleware, async (req, res) => {
     const title = await resolveChatTitle(req.chatId);
