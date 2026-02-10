@@ -18,7 +18,11 @@ function dateKeyToOrdinal(dateKey) {
 
 export function cloneValue(value) {
   if (typeof structuredClone === 'function') {
-    return structuredClone(value)
+    try {
+      return structuredClone(value)
+    } catch {
+      // Fallback for non-cloneable values (e.g. reactive/proxy wrappers)
+    }
   }
   return JSON.parse(JSON.stringify(value))
 }

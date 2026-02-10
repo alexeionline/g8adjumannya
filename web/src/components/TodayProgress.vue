@@ -11,6 +11,14 @@ const percent = computed(() => {
   const g = Math.max(1, Number(props.goal) || 100)
   return Math.max(0, Math.min(100, (val / g) * 100))
 })
+
+const ringLabel = computed(() => {
+  const val = Number(props.value) || 0
+  if (val > 100) {
+    return String(Math.round(val))
+  }
+  return `${Math.round(percent.value)}%`
+})
 </script>
 
 <template>
@@ -23,7 +31,7 @@ const percent = computed(() => {
     :aria-label="`${value} из ${goal}`"
   >
     <div class="ring" :style="{ '--value': percent }">
-      <span class="ring-value">{{ Math.round(percent) }}%</span>
+      <span class="ring-value">{{ ringLabel }}</span>
     </div>
   </div>
 </template>
