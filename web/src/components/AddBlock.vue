@@ -1,34 +1,22 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 const props = defineProps({
   userInput: { type: String, default: '' },
-  targetInput: { type: String, default: '100' },
+  targetValue: { type: Number, default: 100 },
   currentTotal: { type: Number, default: 0 },
   onSubmit: { type: Function, required: true },
 })
 
-const emit = defineEmits(['update:userInput', 'update:targetInput'])
+const emit = defineEmits(['update:userInput'])
 
 const quickAdds = [10, 20, 25, 30]
-const localTarget = ref(props.targetInput || '100')
-
-watch(
-  () => props.targetInput,
-  (value) => {
-    localTarget.value = value || '100'
-  }
-)
-
-function commitTarget() {
-  emit('update:targetInput', String(localTarget.value || '100'))
-}
 
 const completion = computed(() => {
-  const target = Math.max(1, Number(props.targetInput) || 100)
+  const target = Math.max(1, Number(props.targetValue) || 100)
   return Math.max(0, Math.min(100, Math.round((Number(props.currentTotal || 0) / target) * 100)))
 })
 </script>
@@ -36,31 +24,16 @@ const completion = computed(() => {
 <template>
   <Card class="add-block-card">
     <CardHeader class="add-block-header">
-      <CardTitle class="add-block-title">Quick Add</CardTitle>
-      <p class="add-block-meta">{{ currentTotal }} / {{ targetInput || '100' }} today</p>
+      <CardTitle class="add-block-title">Быстрое добавление</CardTitle>
+      <p class="add-block-meta">{{ currentTotal }} / {{ targetValue || 100 }} за сегодня</p>
     </CardHeader>
     <CardContent class="add-block-content">
-      <div class="target-row">
-        <label for="target" class="target-label">Daily target</label>
-        <Input
-          id="target"
-          type="number"
-          min="20"
-          max="500"
-          :model-value="localTarget"
-          @update:model-value="localTarget = String($event || '')"
-          class="target-input"
-          @blur="commitTarget"
-          @keydown.enter.prevent="commitTarget"
-        />
-      </div>
-
       <div class="add-row">
         <Input
           type="number"
           inputmode="numeric"
           pattern="[0-9]*"
-          placeholder="Set count"
+          placeholder="Количество"
           min="1"
           max="1000"
           :model-value="userInput"
@@ -69,7 +42,7 @@ const completion = computed(() => {
           @keydown.enter.prevent="onSubmit"
         />
         <Button type="button" class="add-submit" @click="onSubmit">
-          Save
+          Добавить
         </Button>
       </div>
 
@@ -125,23 +98,6 @@ const completion = computed(() => {
 .add-block-content {
   display: grid;
   gap: 0.75rem;
-}
-
-.target-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.7rem;
-}
-
-.target-label {
-  font-size: 0.8rem;
-  color: var(--muted-foreground);
-}
-
-.target-input {
-  width: 6.2rem;
-  text-align: center;
 }
 
 .add-row {

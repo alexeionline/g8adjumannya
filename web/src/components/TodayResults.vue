@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +27,16 @@ const editing = ref(null)
 const editInput = ref('')
 const deleteDialogOpen = ref(false)
 const pendingDelete = ref(null)
+const showAll = ref(false)
+const TOP_LIMIT = 5
+
+const displayedItems = computed(() => {
+  const normalized = (props.items || []).map((item, index) => ({
+    ...item,
+    rowRank: index + 1,
+  }))
+  return showAll.value ? normalized : normalized.slice(0, TOP_LIMIT)
+})
 
 function isEditing(itemKey, index) {
   return editing.value && editing.value.itemKey === itemKey && editing.value.index === index
@@ -104,72 +114,82 @@ function elapsedTitle(prev, cur) {
 <template>
   <Card class="results-card">
     <CardHeader class="results-header">
-      <CardTitle>Today Board</CardTitle>
-      <p class="results-sub">Live status in current chat</p>
+      <CardTitle>Результаты сегодня</CardTitle>
+      <p class="results-sub">Актуальный статус участников чата</p>
     </CardHeader>
     <CardContent>
-      <ul v-if="items.length" class="today-list">
-        <li
-          v-for="(item, index) in items"
-          :key="item.key"
-          :class="['today-row', { 'today-row-done': item.value >= goal }]"
-        >
-          <div class="row-rank">{{ index + 1 }}</div>
-          <TodayProgress :value="item.value" :goal="goal" />
-          <div class="today-body">
-            <div class="today-username">{{ item.label }}</div>
-            <div class="today-approaches">
-              <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
-                <span
-                  v-if="i > 0"
-                  class="today-approach-elapsed"
-                  :title="elapsedTitle(item.approaches[i - 1], approach)"
-                >{{ elapsedText(item.approaches[i - 1], approach) }}</span>
-                <div v-if="isEditing(item.key, i)" class="today-approach-edit">
-                  <Input
-                    v-model="editInput"
-                    type="number"
-                    min="1"
-                    max="1000"
-                    class="today-approach-input"
-                    @keydown.enter.prevent="saveEdit"
-                    @keydown.escape="closeEdit"
-                  />
-                  <Button type="button" size="sm" @click="saveEdit">Save</Button>
-                  <Button type="button" size="sm" variant="outline" @click="closeEdit">Cancel</Button>
-                  <Button type="button" size="sm" variant="destructive" @click="openDeleteDialog">Delete</Button>
-                </div>
-                <button
-                  v-else
-                  type="button"
-                  class="approach-pill"
-                  :class="{ 'approach-pill-passive': approachId(approach) == null }"
-                  :title="approachId(approach) != null ? 'Редактировать подход' : String(approachCount(approach))"
-                  @click="startEdit(item.key, i, { id: approachId(approach), count: approachCount(approach) })"
-                >
-                  {{ approachCount(approach) }}
-                </button>
-              </template>
+      <template v-if="items.length">
+        <ul class="today-list">
+          <li
+            v-for="item in displayedItems"
+            :key="item.key"
+            :class="['today-row', { 'today-row-done': item.value >= goal }]"
+          >
+            <div class="row-rank">{{ item.rowRank }}</div>
+            <TodayProgress :value="item.value" :goal="goal" />
+            <div class="today-body">
+              <div class="today-title-row">
+                <div class="today-username">{{ item.label }}</div>
+                <span class="today-count-chip">{{ item.value }}</span>
+              </div>
+              <div class="today-approaches">
+                <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
+                  <span
+                    v-if="i > 0"
+                    class="today-approach-elapsed"
+                    :title="elapsedTitle(item.approaches[i - 1], approach)"
+                  >{{ elapsedText(item.approaches[i - 1], approach) }}</span>
+                  <div v-if="isEditing(item.key, i)" class="today-approach-edit">
+                    <Input
+                      v-model="editInput"
+                      type="number"
+                      min="1"
+                      max="1000"
+                      class="today-approach-input"
+                      @keydown.enter.prevent="saveEdit"
+                      @keydown.escape="closeEdit"
+                    />
+                    <Button type="button" size="sm" @click="saveEdit">Сохранить</Button>
+                    <Button type="button" size="sm" variant="outline" @click="closeEdit">Отмена</Button>
+                    <Button type="button" size="sm" variant="destructive" @click="openDeleteDialog">Удалить</Button>
+                  </div>
+                  <button
+                    v-else
+                    type="button"
+                    class="approach-pill"
+                    :class="{ 'approach-pill-passive': approachId(approach) == null }"
+                    :title="approachId(approach) != null ? 'Редактировать подход' : String(approachCount(approach))"
+                    @click="startEdit(item.key, i, { id: approachId(approach), count: approachCount(approach) })"
+                  >
+                    {{ approachCount(approach) }}
+                  </button>
+                </template>
+              </div>
             </div>
-          </div>
-        </li>
-      </ul>
+          </li>
+        </ul>
+        <div v-if="items.length > TOP_LIMIT" class="show-more-wrap">
+          <Button type="button" size="sm" class="show-more-btn" @click="showAll = !showAll">
+            {{ showAll ? 'Свернуть' : 'Показать всех' }}
+          </Button>
+        </div>
+      </template>
       <div v-else class="results-empty">
-        No data for today yet. Add the first set.
+        За сегодня пока нет данных. Добавь первый подход
       </div>
 
       <AlertDialog v-model:open="deleteDialogOpen">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete approach?</AlertDialogTitle>
+            <AlertDialogTitle>Удалить подход?</AlertDialogTitle>
             <AlertDialogDescription>
-              Delete {{ editing?.count ?? '' }} reps from this log? This action cannot be undone.
+              Удалить {{ editing?.count ?? '' }} повторений из этого подхода? Действие нельзя отменить.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction class="bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete">
-              Delete
+              Удалить
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -239,6 +259,13 @@ function elapsedTitle(prev, cur) {
   min-width: 0;
 }
 
+.today-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
 .today-username {
   font-size: 0.86rem;
   font-weight: 700;
@@ -246,6 +273,16 @@ function elapsedTitle(prev, cur) {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.today-count-chip {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0.08rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--foreground-strong);
+  background: rgba(14, 165, 233, 0.16);
 }
 
 .today-approaches {
@@ -301,5 +338,29 @@ function elapsedTitle(prev, cur) {
   font-size: 0.85rem;
   color: var(--muted-foreground);
   background: rgba(242, 246, 252, 0.9);
+}
+
+.show-more-wrap {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.show-more-btn {
+  min-width: 9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(10, 88, 156, 0.26);
+  background: linear-gradient(145deg, rgba(239, 249, 255, 0.96), rgba(223, 241, 255, 0.94));
+  color: color-mix(in oklab, var(--foreground-strong) 85%, #0ea5e9 15%);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.show-more-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.18);
+  background: linear-gradient(145deg, rgba(226, 245, 255, 0.98), rgba(203, 233, 255, 0.94));
 }
 </style>

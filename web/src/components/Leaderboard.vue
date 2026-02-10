@@ -1,9 +1,18 @@
 <script setup>
+import { computed, ref } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
-defineProps({
+const props = defineProps({
   items: { type: Array, default: () => [] },
 })
+
+const showAll = ref(false)
+const TOP_LIMIT = 5
+
+const displayedItems = computed(() =>
+  showAll.value ? props.items || [] : (props.items || []).slice(0, TOP_LIMIT)
+)
 </script>
 
 <template>
@@ -13,18 +22,25 @@ defineProps({
       <p class="leader-sub">Лучший разовый подход в этом чате</p>
     </CardHeader>
     <CardContent>
-      <ul v-if="items.length" class="leaderboard">
-        <li v-for="item in items" :key="item.key" class="leader-item">
-          <div class="leader-left">
-            <span class="rank" :class="`rank-${Math.min(item.rank, 3)}`">{{ item.rank }}</span>
-            <div>
-              <p class="name">{{ item.label }}</p>
-              <p class="date">{{ item.date }}</p>
+      <template v-if="items.length">
+        <ul class="leaderboard">
+          <li v-for="item in displayedItems" :key="item.key" class="leader-item">
+            <div class="leader-left">
+              <span class="rank" :class="`rank-${Math.min(item.rank, 3)}`">{{ item.rank }}</span>
+              <div>
+                <p class="name">{{ item.label }}</p>
+                <p class="date">{{ item.date }}</p>
+              </div>
             </div>
-          </div>
-          <div class="value">{{ item.value }}</div>
-        </li>
-      </ul>
+            <div class="value">{{ item.value }}</div>
+          </li>
+        </ul>
+        <div v-if="items.length > TOP_LIMIT" class="show-more-wrap">
+          <Button type="button" size="sm" class="show-more-btn" @click="showAll = !showAll">
+            {{ showAll ? 'Свернуть' : 'Показать всех' }}
+          </Button>
+        </div>
+      </template>
       <div v-else class="leader-empty">Пока нет рекордов</div>
     </CardContent>
   </Card>
@@ -121,5 +137,29 @@ defineProps({
   font-size: 0.84rem;
   color: var(--muted-foreground);
   padding: 0.7rem;
+}
+
+.show-more-wrap {
+  margin-top: 0.7rem;
+  display: flex;
+  justify-content: center;
+}
+
+.show-more-btn {
+  min-width: 9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(10, 88, 156, 0.26);
+  background: linear-gradient(145deg, rgba(239, 249, 255, 0.96), rgba(223, 241, 255, 0.94));
+  color: color-mix(in oklab, var(--foreground-strong) 85%, #0ea5e9 15%);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.show-more-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.18);
+  background: linear-gradient(145deg, rgba(226, 245, 255, 0.98), rgba(203, 233, 255, 0.94));
 }
 </style>

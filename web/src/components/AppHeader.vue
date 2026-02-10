@@ -12,7 +12,7 @@ defineProps({
       <span class="brand-mark-glow" />
     </div>
     <div class="brand-copy">
-      <p class="brand-kicker">Daily challenge system</p>
+      <p class="brand-kicker">Система ежедневного челленджа</p>
       <h1>{{ title }}</h1>
       <p v-if="subtitle" class="brand-subtitle">{{ subtitle }}</p>
     </div>

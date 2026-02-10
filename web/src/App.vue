@@ -5,6 +5,7 @@ import AddBlock from './components/AddBlock.vue'
 import TodayResults from './components/TodayResults.vue'
 import Leaderboard from './components/Leaderboard.vue'
 import CalendarView from './components/CalendarView.vue'
+import LevelsBadges from './components/LevelsBadges.vue'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert'
 import { useAuthStore } from './stores/auth'
@@ -115,6 +116,20 @@ const myBestRank = computed(() => {
   if (!me) return null
   const index = leaderboard.value.findIndex((item) => String(item.key) === me)
   return index >= 0 ? index + 1 : null
+})
+
+const myBestApproach = computed(() => {
+  const me = String(historyUserId.value || auth.defaultUserId || '')
+  if (!me) return 0
+
+  const bestFromRecords = leaderboard.value.find((item) => String(item.key) === me)?.value ?? 0
+  const myTodayRow = todayResults.value.find((item) => String(item.key) === me)
+  const bestFromTodayApproaches = Math.max(
+    0,
+    ...(myTodayRow?.approaches || []).map((entry) => Number(entry.count || 0))
+  )
+
+  return Math.max(Number(bestFromRecords || 0), Number(bestFromTodayApproaches || 0))
 })
 
 async function refreshToday() {
@@ -360,6 +375,11 @@ async function onChangeChat(event) {
         :today-key="todayDateKey"
         :on-prev="() => moveMonth(-1)"
         :on-next="() => moveMonth(1)"
+      />
+
+      <LevelsBadges
+        :history-days="data.historyDays"
+        :best-approach="myBestApproach"
       />
     </div>
   </div>

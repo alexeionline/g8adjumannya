@@ -18,6 +18,10 @@ const DEMO_USERS = [
   { user_id: 1002, username: 'maria', first_name: 'Maria', last_name: null },
   { user_id: 1003, username: 'denis', first_name: 'Denis', last_name: null },
   { user_id: 1004, username: 'irina', first_name: 'Irina', last_name: null },
+  { user_id: 1005, username: 'oleg', first_name: 'Oleg', last_name: null },
+  { user_id: 1006, username: 'nina', first_name: 'Nina', last_name: null },
+  { user_id: 1007, username: 'roman', first_name: 'Roman', last_name: null },
+  { user_id: 1008, username: 'sveta', first_name: 'Sveta', last_name: null },
 ]
 
 const DEMO_CHATS = [
@@ -214,6 +218,44 @@ function buildMorningStatusRows() {
         { id: 14004, count: 14, created_at: demoCreatedAt(54) },
       ],
     },
+    {
+      ...DEMO_USERS[4],
+      count: 92,
+      approaches: [
+        { id: 15001, count: 22, created_at: demoCreatedAt(4) },
+        { id: 15002, count: 24, created_at: demoCreatedAt(27) },
+        { id: 15003, count: 24, created_at: demoCreatedAt(55) },
+        { id: 15004, count: 22, created_at: demoCreatedAt(87) },
+      ],
+    },
+    {
+      ...DEMO_USERS[5],
+      count: 44,
+      approaches: [
+        { id: 16001, count: 14, created_at: demoCreatedAt(6) },
+        { id: 16002, count: 15, created_at: demoCreatedAt(29) },
+        { id: 16003, count: 15, created_at: demoCreatedAt(61) },
+      ],
+    },
+    {
+      ...DEMO_USERS[6],
+      count: 131,
+      approaches: [
+        { id: 17001, count: 35, created_at: demoCreatedAt(0) },
+        { id: 17002, count: 33, created_at: demoCreatedAt(24) },
+        { id: 17003, count: 33, created_at: demoCreatedAt(49) },
+        { id: 17004, count: 30, created_at: demoCreatedAt(80) },
+      ],
+    },
+    {
+      ...DEMO_USERS[7],
+      count: 57,
+      approaches: [
+        { id: 18001, count: 19, created_at: demoCreatedAt(11) },
+        { id: 18002, count: 19, created_at: demoCreatedAt(38) },
+        { id: 18003, count: 19, created_at: demoCreatedAt(74) },
+      ],
+    },
   ]
 }
 
@@ -258,6 +300,46 @@ function buildEveningStatusRows() {
         { id: 24002, count: 32, created_at: demoCreatedAt(30) },
         { id: 24003, count: 34, created_at: demoCreatedAt(70) },
         { id: 24004, count: 30, created_at: demoCreatedAt(110) },
+      ],
+    },
+    {
+      ...DEMO_USERS[4],
+      count: 41,
+      approaches: [
+        { id: 25001, count: 11, created_at: demoCreatedAt(9) },
+        { id: 25002, count: 10, created_at: demoCreatedAt(26) },
+        { id: 25003, count: 10, created_at: demoCreatedAt(58) },
+        { id: 25004, count: 10, created_at: demoCreatedAt(96) },
+      ],
+    },
+    {
+      ...DEMO_USERS[5],
+      count: 96,
+      approaches: [
+        { id: 26001, count: 24, created_at: demoCreatedAt(13) },
+        { id: 26002, count: 24, created_at: demoCreatedAt(42) },
+        { id: 26003, count: 24, created_at: demoCreatedAt(73) },
+        { id: 26004, count: 24, created_at: demoCreatedAt(103) },
+      ],
+    },
+    {
+      ...DEMO_USERS[6],
+      count: 59,
+      approaches: [
+        { id: 27001, count: 15, created_at: demoCreatedAt(8) },
+        { id: 27002, count: 14, created_at: demoCreatedAt(33) },
+        { id: 27003, count: 15, created_at: demoCreatedAt(63) },
+        { id: 27004, count: 15, created_at: demoCreatedAt(100) },
+      ],
+    },
+    {
+      ...DEMO_USERS[7],
+      count: 142,
+      approaches: [
+        { id: 28001, count: 36, created_at: demoCreatedAt(0) },
+        { id: 28002, count: 36, created_at: demoCreatedAt(24) },
+        { id: 28003, count: 35, created_at: demoCreatedAt(54) },
+        { id: 28004, count: 35, created_at: demoCreatedAt(89) },
       ],
     },
   ]

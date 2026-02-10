@@ -25,16 +25,12 @@ const percent = computed(() => {
     <div class="ring" :style="{ '--value': percent }">
       <span class="ring-value">{{ Math.round(percent) }}%</span>
     </div>
-    <p class="progress-text">{{ value }} / {{ goal }}</p>
   </div>
 </template>
 
 <style scoped>
 .progress-chip {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 0.7rem;
+  display: inline-grid;
 }
 
 .ring {
@@ -54,12 +50,5 @@ const percent = computed(() => {
   font-size: 0.57rem;
   font-weight: 700;
   color: var(--foreground-strong);
-}
-
-.progress-text {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--foreground);
 }
 </style>
