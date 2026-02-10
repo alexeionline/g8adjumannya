@@ -1,31 +1,23 @@
 <script setup>
-import { computed } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 const props = defineProps({
   userInput: { type: String, default: '' },
-  targetValue: { type: Number, default: 100 },
-  currentTotal: { type: Number, default: 0 },
+  onQuickAdd: { type: Function, default: null },
   onSubmit: { type: Function, required: true },
 })
 
 const emit = defineEmits(['update:userInput'])
 
-const quickAdds = [10, 20, 25, 30]
-
-const completion = computed(() => {
-  const target = Math.max(1, Number(props.targetValue) || 100)
-  return Math.max(0, Math.min(100, Math.round((Number(props.currentTotal || 0) / target) * 100)))
-})
+const quickAdds = [5, 15]
 </script>
 
 <template>
   <Card class="add-block-card">
     <CardHeader class="add-block-header">
       <CardTitle class="add-block-title">Быстрое добавление</CardTitle>
-      <p class="add-block-meta">{{ currentTotal }} / {{ targetValue || 100 }} за сегодня</p>
     </CardHeader>
     <CardContent class="add-block-content">
       <div class="add-row">
@@ -52,14 +44,10 @@ const completion = computed(() => {
           :key="value"
           type="button"
           class="quick-pill"
-          @click="emit('update:userInput', String(value))"
+          @click="onQuickAdd && onQuickAdd(value)"
         >
           +{{ value }}
         </button>
-      </div>
-
-      <div class="meter" aria-hidden="true">
-        <span class="meter-fill" :style="{ width: `${completion}%` }" />
       </div>
     </CardContent>
   </Card>
@@ -73,11 +61,6 @@ const completion = computed(() => {
 }
 
 .add-block-header {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.75rem;
   padding-bottom: 0.3rem;
 }
 
@@ -86,13 +69,6 @@ const completion = computed(() => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-}
-
-.add-block-meta {
-  margin: 0;
-  font-size: 0.86rem;
-  color: var(--foreground-strong);
-  font-weight: 600;
 }
 
 .add-block-content {
@@ -137,20 +113,5 @@ const completion = computed(() => {
 .quick-pill:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
-}
-
-.meter {
-  height: 0.34rem;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(17, 53, 91, 0.08);
-}
-
-.meter-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent-strong), #36d6ff);
-  transition: width 0.3s ease;
 }
 </style>

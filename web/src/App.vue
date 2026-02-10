@@ -148,6 +148,16 @@ const myBestApproach = computed(() => {
 
   return Math.max(Number(bestFromRecords || 0), Number(bestFromTodayApproaches || 0))
 })
+const myTodayApproaches = computed(() => {
+  const me = String(historyUserId.value || auth.defaultUserId || '')
+  if (!me) return []
+  const row = todayResults.value.find((item) => String(item.key) === me)
+  if (!row) return []
+  return (row.approaches || []).map((entry) => Number(entry.count || 0)).filter((value) => Number.isFinite(value) && value > 0)
+})
+const todayApproachesCount = computed(() => myTodayApproaches.value.length)
+const todayBestApproach = computed(() => (myTodayApproaches.value.length ? Math.max(...myTodayApproaches.value) : 0))
+const todayWorstApproach = computed(() => (myTodayApproaches.value.length ? Math.min(...myTodayApproaches.value) : 0))
 const badgeMetrics = computed(() => buildBadgesMetrics(data.historyDays, myBestApproach.value))
 const allBadges = computed(() => buildChallengeBadges(badgeMetrics.value))
 const unlockedBadges = computed(() => allBadges.value.filter((item) => item.achieved).length)
@@ -242,7 +252,12 @@ function formatDate(dateStr) {
 
 async function submitAdd() {
   const delta = Number(addCountInput.value)
-  if (!Number.isFinite(delta)) {
+  await addDelta(delta)
+  addCountInput.value = ''
+}
+
+async function addDelta(delta) {
+  if (!Number.isFinite(delta) || delta <= 0) {
     data.error = 'Введите количество повторений'
     return
   }
@@ -251,7 +266,10 @@ async function submitAdd() {
     return
   }
   await data.addCount(auth, Number(historyUserId.value), delta)
-  addCountInput.value = ''
+}
+
+async function quickAdd(delta) {
+  await addDelta(Number(delta))
 }
 
 function moveMonth(direction) {
@@ -332,6 +350,21 @@ async function onChangeChat(event) {
             </p>
           </div>
 
+          <div class="hero-session-stats">
+            <div class="session-stat">
+              <span class="session-stat-label">Подходов сегодня</span>
+              <span class="session-stat-value">{{ todayApproachesCount }}</span>
+            </div>
+            <div class="session-stat">
+              <span class="session-stat-label">Лучший подход</span>
+              <span class="session-stat-value">{{ todayBestApproach }}</span>
+            </div>
+            <div class="session-stat">
+              <span class="session-stat-label">Худший подход</span>
+              <span class="session-stat-value">{{ todayWorstApproach }}</span>
+            </div>
+          </div>
+
           <div class="hero-metrics">
             <button type="button" class="metric-pill metric-pill-button" @click="scrollToCalendar">
               <span class="metric-label">Текущая серия</span>
@@ -351,8 +384,7 @@ async function onChangeChat(event) {
 
       <AddBlock
         :user-input="addCountInput"
-        :target-value="data.targetPerDay"
-        :current-total="todayTotal"
+        :on-quick-add="quickAdd"
         @update:userInput="addCountInput = $event"
         :on-submit="submitAdd"
       />
@@ -546,6 +578,36 @@ async function onChangeChat(event) {
   margin: 0;
   font-size: 0.76rem;
   color: var(--muted-foreground);
+}
+
+.hero-session-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.session-stat {
+  border-radius: 0.72rem;
+  background: rgba(244, 249, 253, 0.94);
+  padding: 0.42rem 0.5rem;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.session-stat-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-stat-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--foreground-strong);
 }
 
 .hero-metrics {
