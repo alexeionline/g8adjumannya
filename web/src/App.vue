@@ -260,20 +260,54 @@ function moveMonth(direction) {
   monthCursor.value = next
 }
 
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2
+}
+
+function scrollWithOffset(targetRef, offsetPx = 20) {
+  const el = targetRef?.value
+  if (!el) return
+
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const targetTop = Math.max(0, el.getBoundingClientRect().top + window.scrollY - offsetPx)
+
+  if (prefersReducedMotion) {
+    window.scrollTo(0, targetTop)
+    return
+  }
+
+  const startTop = window.scrollY
+  const distance = targetTop - startTop
+  const durationMs = 560
+  const startTs = performance.now()
+
+  function step(ts) {
+    const elapsed = ts - startTs
+    const progress = Math.min(1, elapsed / durationMs)
+    const eased = easeInOutCubic(progress)
+    window.scrollTo(0, startTop + distance * eased)
+    if (progress < 1) {
+      window.requestAnimationFrame(step)
+    }
+  }
+
+  window.requestAnimationFrame(step)
+}
+
 function scrollToBadges() {
-  badgesAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  scrollWithOffset(badgesAnchorRef, 20)
 }
 
 function scrollToTodayResults() {
-  todayResultsAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  scrollWithOffset(todayResultsAnchorRef, 20)
 }
 
 function scrollToLeaderboard() {
-  leaderboardAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  scrollWithOffset(leaderboardAnchorRef, 20)
 }
 
 function scrollToCalendar() {
-  calendarAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  scrollWithOffset(calendarAnchorRef, 20)
 }
 
 async function onChangeChat(event) {
@@ -573,14 +607,17 @@ async function onChangeChat(event) {
 }
 
 .metric-label {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   color: var(--muted-foreground);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metric-value {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--foreground-strong);
 }
@@ -668,10 +705,13 @@ async function onChangeChat(event) {
 }
 
 .context-label {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   color: var(--muted-foreground);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .context-value {
