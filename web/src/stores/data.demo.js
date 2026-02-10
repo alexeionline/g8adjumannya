@@ -228,6 +228,7 @@ export function buildRecordsFromStatus(statusRows) {
         max_add: bestApproach,
         record_date: todayKey,
         best_approach: bestApproach,
+        best_approach_date: todayKey,
         best_day_total: bestDay,
         best_day_date: todayKey,
         total_all: bestDay * 18 + bestApproach * 4 + bonus * 10,

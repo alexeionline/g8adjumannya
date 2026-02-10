@@ -21,7 +21,7 @@ const activeMeta = computed(() => tabs.find((tab) => tab.id === activeTab.value)
 
 const rankedItems = computed(() => {
   const valuesByTab = {
-    approach: { valueKey: 'bestApproach', dateKey: '' },
+    approach: { valueKey: 'bestApproach', dateKey: 'bestApproachDate' },
     day: { valueKey: 'bestDay', dateKey: 'bestDayDate' },
     total: { valueKey: 'totalAll', dateKey: '' },
   }

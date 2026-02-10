@@ -640,10 +640,13 @@ async function getRecordsByChatV2(chatUserIds) {
         ORDER BY user_id, day_total DESC, date DESC
       ),
       best_approach AS (
-        SELECT user_id, MAX(count) AS best_approach
+        SELECT DISTINCT ON (user_id)
+          user_id,
+          count AS best_approach,
+          date AS best_approach_date
         FROM daily_adds
         WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
-        GROUP BY user_id
+        ORDER BY user_id, count DESC, date DESC, created_at DESC
       ),
       overall_totals AS (
         SELECT user_id, SUM(count) AS total_all
@@ -656,6 +659,7 @@ async function getRecordsByChatV2(chatUserIds) {
         bd.best_day_date,
         bd.best_day_total,
         COALESCE(ba.best_approach, 0) AS best_approach,
+        ba.best_approach_date,
         COALESCE(ot.total_all, 0) AS total_all,
         u.username
       FROM best_day bd
@@ -679,19 +683,23 @@ async function getRecordsByChatV2Period(chatUserIds, period) {
       `
         WITH users_scope AS (
           SELECT UNNEST($1::bigint[]) AS user_id
+        ),
+        best_approach AS (
+          SELECT DISTINCT ON (user_id)
+            user_id,
+            count::int AS value,
+            date AS period_start,
+            date AS period_end
+          FROM daily_adds
+          WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+          ORDER BY user_id, count DESC, date DESC, created_at DESC
         )
-        SELECT
-          us.user_id,
-          u.username,
-          MAX(da.count)::int AS value,
-          NULL::date AS period_start,
-          NULL::date AS period_end
+        SELECT us.user_id, u.username, ba.value, ba.period_start, ba.period_end
         FROM users_scope us
-        LEFT JOIN daily_adds da ON da.user_id = us.user_id AND da.migrated = FALSE
+        LEFT JOIN best_approach ba ON ba.user_id = us.user_id
         LEFT JOIN users u ON u.user_id = us.user_id
-        GROUP BY us.user_id, u.username
-        HAVING MAX(da.count) IS NOT NULL
-        ORDER BY value DESC, us.user_id ASC
+        WHERE ba.value IS NOT NULL
+        ORDER BY ba.value DESC, us.user_id ASC
       `,
       [chatUserIds]
     );

@@ -194,6 +194,7 @@ const leaderboard = computed(() =>
     key: row.user_id,
     label: row.username || row.first_name || row.user_id,
     bestApproach: Number(row.best_approach ?? row.max_add ?? 0),
+    bestApproachDate: formatDate(row.best_approach_date ?? row.record_date),
     bestDay: Number(row.best_day_total ?? 0),
     bestDayDate: formatDate(row.best_day_date ?? row.record_date),
     totalAll: Number(row.total_all ?? 0),

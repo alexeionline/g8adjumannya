@@ -83,6 +83,7 @@ export function normalizeRecordsRows(rows) {
       max_add: Number(row.max_add ?? row.best_approach ?? 0),
       record_date: row.record_date ?? row.best_day_date ?? null,
       best_approach: Number(row.best_approach ?? row.max_add ?? 0),
+      best_approach_date: row.best_approach_date ?? row.record_date ?? null,
       best_day_total: Number(row.best_day_total ?? row.record_count ?? 0),
       best_day_date: row.best_day_date ?? row.record_date ?? null,
       total_all: Number(row.total_all ?? row.total ?? 0),

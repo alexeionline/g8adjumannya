@@ -588,6 +588,7 @@ function createApiApp() {
       user_id: r.user_id,
       display_name: getDisplayNameV2(r),
       best_approach: r.best_approach,
+      best_approach_date: r.best_approach_date,
       best_day_total: r.best_day_total,
       best_day_date: r.best_day_date,
       total_all: Number(r.total_all || 0),
