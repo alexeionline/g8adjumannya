@@ -11,7 +11,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:userInput'])
 
-const quickAdds = [5, 15]
+const quickAdds = [5, 10, 15, 20, 25, 30]
 </script>
 
 <template>
