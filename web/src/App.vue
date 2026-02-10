@@ -259,6 +259,14 @@ const averageApproachesPerDay = computed(() => {
   }
   return (nonMigratedApproachesTotal.value / nonMigratedApproachDays.value).toFixed(1)
 })
+const averagePerApproach = computed(() => {
+  const totalApproaches = Number(nonMigratedApproachesTotal.value || 0)
+  const totalReps = Number(data.timeOfDayPushups?.total || 0)
+  if (!totalApproaches || !totalReps) {
+    return '0.0'
+  }
+  return (totalReps / totalApproaches).toFixed(1)
+})
 const dayPeriodShare = computed(() => {
   const source = data.timeOfDayPushups || {}
   const total = Number(source.total || 0)
@@ -447,6 +455,10 @@ async function onChangeChat(event) {
           <article class="stat-item">
             <p class="stat-key">В среднем подходов</p>
             <p class="stat-value">{{ averageApproachesPerDay }}</p>
+          </article>
+          <article class="stat-item">
+            <p class="stat-key">В среднем за подход</p>
+            <p class="stat-value">{{ averagePerApproach }}</p>
           </article>
           <article class="stat-item">
             <div class="stat-dayparts">
