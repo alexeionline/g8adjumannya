@@ -16,8 +16,6 @@ const {
   hasUserReached100,
   initDb,
   removeSharedChat,
-  setCountForUserDate,
-  syncUserRecord,
   updateRecord,
   upsertUser,
 } = require('./db');
