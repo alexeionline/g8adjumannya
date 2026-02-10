@@ -17,12 +17,12 @@ import TodayProgress from './TodayProgress.vue'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
+  goal: { type: Number, default: 100 },
   onRefresh: { type: Function, default: null },
   onUpdateApproach: { type: Function, default: null },
   onDeleteApproach: { type: Function, default: null },
 })
 
-const GOAL = 100
 const editing = ref(null)
 const editInput = ref('')
 const deleteDialogOpen = ref(false)
@@ -102,22 +102,21 @@ function elapsedTitle(prev, cur) {
 </script>
 
 <template>
-  <Card>
-    <CardHeader>
-      <CardTitle>Сегодня</CardTitle>
+  <Card class="results-card">
+    <CardHeader class="results-header">
+      <CardTitle>Today Board</CardTitle>
+      <p class="results-sub">Live status in current chat</p>
     </CardHeader>
     <CardContent>
-      <ul class="today-list">
+      <ul v-if="items.length" class="today-list">
         <li
-          v-for="item in items"
+          v-for="(item, index) in items"
           :key="item.key"
-          :class="{ 'result-done': item.value >= GOAL, 'result-pending': item.value < GOAL }"
-          class="today-row"
+          :class="['today-row', { 'today-row-done': item.value >= goal }]"
         >
-          <div class="today-left">
-            <TodayProgress :value="item.value" :goal="GOAL" />
-          </div>
-          <div class="today-right">
+          <div class="row-rank">{{ index + 1 }}</div>
+          <TodayProgress :value="item.value" :goal="goal" />
+          <div class="today-body">
             <div class="today-username">{{ item.label }}</div>
             <div class="today-approaches">
               <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
@@ -136,46 +135,41 @@ function elapsedTitle(prev, cur) {
                     @keydown.enter.prevent="saveEdit"
                     @keydown.escape="closeEdit"
                   />
-                  <Button type="button" size="sm" variant="default" title="Сохранить" @click="saveEdit">
-                    Сохранить
-                  </Button>
-                  <Button type="button" size="sm" variant="outline" title="Закрыть" @click="closeEdit">
-                    Отмена
-                  </Button>
-                  <Button type="button" size="sm" variant="destructive" title="Удалить" @click="openDeleteDialog">
-                    Удалить
-                  </Button>
+                  <Button type="button" size="sm" @click="saveEdit">Save</Button>
+                  <Button type="button" size="sm" variant="outline" @click="closeEdit">Cancel</Button>
+                  <Button type="button" size="sm" variant="destructive" @click="openDeleteDialog">Delete</Button>
                 </div>
-                <Button
+                <button
                   v-else
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="today-approach-square"
-                  :class="{ 'today-approach-no-edit': approachId(approach) == null }"
-                  :title="approachId(approach) != null ? 'Нажмите для редактирования' : String(approachCount(approach))"
+                  class="approach-pill"
+                  :class="{ 'approach-pill-passive': approachId(approach) == null }"
+                  :title="approachId(approach) != null ? 'Редактировать подход' : String(approachCount(approach))"
                   @click="startEdit(item.key, i, { id: approachId(approach), count: approachCount(approach) })"
                 >
                   {{ approachCount(approach) }}
-                </Button>
+                </button>
               </template>
             </div>
           </div>
         </li>
       </ul>
+      <div v-else class="results-empty">
+        No data for today yet. Add the first set.
+      </div>
 
       <AlertDialog v-model:open="deleteDialogOpen">
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить подход?</AlertDialogTitle>
+            <AlertDialogTitle>Delete approach?</AlertDialogTitle>
             <AlertDialogDescription>
-              Удалить подход {{ editing?.count ?? '' }} отжиманий? Это действие нельзя отменить.
+              Delete {{ editing?.count ?? '' }} reps from this log? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction class="bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete">
-              Удалить
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -185,97 +179,127 @@ function elapsedTitle(prev, cur) {
 </template>
 
 <style scoped>
+.results-card {
+  border: 0;
+  box-shadow: var(--shadow-soft);
+}
+
+.results-header {
+  padding-bottom: 0.2rem;
+}
+
+.results-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
 .today-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  gap: 0.68rem;
 }
 
 .today-row {
   display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 12px;
-  align-items: stretch;
-  min-height: 72px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  grid-template-columns: 1.7rem auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.72rem;
+  border-radius: 1rem;
+  background: rgba(240, 246, 252, 0.78);
+  border: 1px solid rgba(16, 49, 87, 0.06);
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-.today-left {
-  display: flex;
-  align-items: center;
-  min-width: 0;
+.today-row:hover {
+  transform: translateY(-1px);
 }
 
-.today-right {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 6px;
+.today-row-done {
+  background: linear-gradient(130deg, rgba(196, 248, 225, 0.82), rgba(240, 255, 250, 0.74));
+}
+
+.row-rank {
+  margin-top: 0.2rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--foreground-strong);
+  background: rgba(19, 56, 91, 0.1);
+}
+
+.today-body {
   min-width: 0;
-  width: 100%;
 }
 
 .today-username {
-  text-align: left;
-  padding: 2px 0;
-  border-bottom: 1px solid var(--border);
-  font-weight: 600;
-  font-size: 0.9375rem;
-  color: var(--foreground);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--foreground-strong);
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
+  overflow: hidden;
 }
 
 .today-approaches {
+  margin-top: 0.45rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  justify-content: flex-start;
   align-items: center;
-  width: 100%;
+  gap: 0.3rem;
 }
 
 .today-approach-elapsed {
-  font-size: 0.6875rem;
-  font-weight: 400;
+  font-size: 0.62rem;
   color: var(--muted-foreground);
-  padding: 0 2px;
-  min-width: 28px;
-  text-align: center;
 }
 
-.today-approach-square {
-  min-width: 24px;
-  height: auto;
-  padding: 2px 6px;
-  font-size: 0.6875rem;
-  font-weight: 600;
+.approach-pill {
+  border: 0;
+  border-radius: 999px;
+  min-height: 1.4rem;
+  padding: 0.14rem 0.54rem;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--foreground);
+  background: rgba(10, 152, 255, 0.13);
+  transition: background-color 0.2s ease;
 }
 
-.today-approach-clickable {
-  cursor: pointer;
+.approach-pill:hover {
+  background: rgba(10, 152, 255, 0.2);
 }
 
-.today-approach-no-edit {
+.approach-pill-passive {
   cursor: default;
+  background: rgba(18, 48, 88, 0.09);
 }
 
 .today-approach-edit {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.35rem;
   flex-wrap: wrap;
 }
 
 .today-approach-input {
-  width: 64px;
+  width: 4.2rem;
+}
+
+.results-empty {
+  border-radius: 1rem;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  background: rgba(242, 246, 252, 0.9);
 }
 </style>

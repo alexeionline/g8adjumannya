@@ -13,6 +13,9 @@ export async function fetchStatus(auth, date) {
   if (date) {
     params.date = date
   }
+  if (auth.selectedChatId) {
+    params.chat_id = auth.selectedChatId
+  }
   const { data } = await client.get('/status', { params })
   return data
 }
@@ -20,7 +23,11 @@ export async function fetchStatus(auth, date) {
 export async function fetchRecords(auth) {
   requireAuth(auth)
   const client = createApiClient(auth)
-  const { data } = await client.get('/records')
+  const params = {}
+  if (auth.selectedChatId) {
+    params.chat_id = auth.selectedChatId
+  }
+  const { data } = await client.get('/records', { params })
   return data
 }
 
@@ -59,5 +66,12 @@ export async function deleteApproach(auth, approachId, userId) {
   const { data } = await client.delete(`/approaches/${approachId}`, {
     data: { user_id: userId },
   })
+  return data
+}
+
+export async function fetchChats(auth) {
+  requireAuth(auth)
+  const client = createApiClient(auth)
+  const { data } = await client.get('/chats')
   return data
 }

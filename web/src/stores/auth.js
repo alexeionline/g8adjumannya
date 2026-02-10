@@ -7,6 +7,7 @@ export const useAuthStore = defineStore('auth', {
     apiBase: import.meta.env.VITE_API_BASE || '',
     token: import.meta.env.VITE_API_TOKEN || '',
     defaultUserId: import.meta.env.VITE_API_USER_ID || '',
+    selectedChatId: '',
   }),
   getters: {
     isReady(state) {
@@ -22,6 +23,7 @@ export const useAuthStore = defineStore('auth', {
         this.apiBase = data.apiBase || this.apiBase
         this.token = data.token || this.token
         this.defaultUserId = data.defaultUserId || this.defaultUserId
+        this.selectedChatId = data.selectedChatId || ''
       } catch {
         // ignore
       }
@@ -33,6 +35,7 @@ export const useAuthStore = defineStore('auth', {
           apiBase: this.apiBase,
           token: this.token,
           defaultUserId: this.defaultUserId,
+          selectedChatId: this.selectedChatId,
         })
       )
     },
@@ -40,6 +43,7 @@ export const useAuthStore = defineStore('auth', {
       this.apiBase = ''
       this.token = ''
       this.defaultUserId = ''
+      this.selectedChatId = ''
       localStorage.removeItem(STORAGE_KEY)
     },
   },
