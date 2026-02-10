@@ -231,6 +231,13 @@ const calendarDays = computed(() => {
 const participationDays = computed(() =>
   Object.values(data.historyDays || {}).filter((count) => Number(count) > 0).length
 )
+const closedGoalDays = computed(() =>
+  Object.values(data.historyDays || {}).filter((count) => Number(count) > 100).length
+)
+const closedGoalDaysPercent = computed(() => {
+  if (!participationDays.value) return '0%'
+  return `${Math.round((closedGoalDays.value / participationDays.value) * 100)}%`
+})
 const totalPushups = computed(() =>
   Object.values(data.historyDays || {}).reduce((sum, count) => sum + Number(count || 0), 0)
 )
@@ -240,19 +247,17 @@ const nonMigratedApproachesTotal = computed(() =>
 const nonMigratedApproachDays = computed(() =>
   Object.values(data.historyApproachesDays || {}).filter((count) => Number(count || 0) > 0).length
 )
+const averagePushupsPerDay = computed(() => {
+  if (!participationDays.value) {
+    return '0.0'
+  }
+  return (totalPushups.value / participationDays.value).toFixed(1)
+})
 const averageApproachesPerDay = computed(() => {
   if (!nonMigratedApproachDays.value) {
     return '0.0'
   }
   return (nonMigratedApproachesTotal.value / nonMigratedApproachDays.value).toFixed(1)
-})
-const averagePerApproach = computed(() => {
-  const totalApproaches = Number(nonMigratedApproachesTotal.value || 0)
-  const totalReps = Number(data.timeOfDayPushups?.total || 0)
-  if (!totalApproaches || !totalReps) {
-    return '0.0'
-  }
-  return (totalReps / totalApproaches).toFixed(1)
 })
 const dayPeriodShare = computed(() => {
   const source = data.timeOfDayPushups || {}
@@ -423,7 +428,13 @@ async function onChangeChat(event) {
         <CardContent class="stats-grid">
           <article class="stat-item">
             <p class="stat-key">Дней активности</p>
-            <p class="stat-value">{{ participationDays }}</p>
+            <p class="stat-value">
+              {{ participationDays }}
+              <span class="stat-value-divider">|</span>
+              <span class="stat-value-accent">{{ closedGoalDays }}</span>
+              <span class="stat-value-divider">|</span>
+              <span class="stat-value-accent">{{ closedGoalDaysPercent }}</span>
+            </p>
           </article>
           <article class="stat-item">
             <p class="stat-key">Всего повторений</p>
@@ -431,11 +442,11 @@ async function onChangeChat(event) {
           </article>
           <article class="stat-item">
             <p class="stat-key">В среднем в день</p>
-            <p class="stat-value">{{ averageApproachesPerDay }}</p>
+            <p class="stat-value">{{ averagePushupsPerDay }}</p>
           </article>
           <article class="stat-item">
-            <p class="stat-key">В среднем за подход</p>
-            <p class="stat-value">{{ averagePerApproach }}</p>
+            <p class="stat-key">В среднем подходов</p>
+            <p class="stat-value">{{ averageApproachesPerDay }}</p>
           </article>
           <article class="stat-item">
             <div class="stat-dayparts">
@@ -815,6 +826,16 @@ async function onChangeChat(event) {
   font-size: 1.15rem;
   line-height: 1;
   color: var(--foreground-strong);
+}
+
+.stat-value-divider {
+  margin: 0 0.16rem;
+  opacity: 0.5;
+}
+
+.stat-value-accent {
+  color: #16a34a;
+  font-size: 0.86rem;
 }
 
 .stat-dayparts {
