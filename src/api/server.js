@@ -10,7 +10,6 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 const {
   addCount,
   getChatIdByToken,
-  getUserHistory,
   getUserById,
   getApproachesCountsByChatAndDate,
   getChatMeta,
@@ -336,10 +335,16 @@ function createApiApp() {
     return res.status(400).json({ error: 'user_id is required' });
   }
 
-  const rows = await getUserHistory(req.chatId, userId);
+  const chatUserIds = await getSharedUserIdsByChat(req.chatId);
+  const chatUserIdsNum = chatUserIds.map((uid) => Number(uid));
+  if (!chatUserIdsNum.includes(userId)) {
+    return res.status(403).json({ error: 'no access to this user' });
+  }
+
+  const rows = await getHistoryByUserIdV2(userId);
   const days = rows.reduce((acc, row) => {
     const key = dayjs(row.date).format('YYYY-MM-DD');
-    acc[key] = row.count;
+    acc[key] = Number(row.total ?? row.count ?? 0);
     return acc;
   }, {});
 

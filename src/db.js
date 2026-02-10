@@ -108,10 +108,7 @@ async function initDb() {
           WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'created_at'
         ) THEN
           ALTER TABLE users ADD COLUMN created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-          UPDATE users u SET created_at = COALESCE(
-            (SELECT MIN(updated_at) FROM daily_counts dc WHERE dc.user_id = u.user_id),
-            u.created_at
-          );
+          UPDATE users u SET created_at = COALESCE(u.updated_at, u.created_at);
         END IF;
       END $$;
     `);
@@ -246,70 +243,7 @@ async function initDb() {
       }
     }
 
-    // Миграция данных из daily_counts в daily_adds (один раз). Пользователи бота не теряют историю.
-    const migrateToDailyAddsKey = 'migrate_daily_counts_to_daily_adds_v1';
-    const migrateCheck = await pool.query(
-      'SELECT 1 FROM migration_flags WHERE name = $1 LIMIT 1',
-      [migrateToDailyAddsKey]
-    );
-    if (migrateCheck.rowCount === 0) {
-      await pool.query('BEGIN');
-      try {
-        await pool.query(
-          'INSERT INTO migration_flags (name, applied_at) VALUES ($1, NOW())',
-          [migrateToDailyAddsKey]
-        );
-        // Пользователи из daily_counts без записи в users (на всякий случай)
-        await pool.query(`
-          INSERT INTO users (user_id, username, first_name, last_name, updated_at, created_at)
-          SELECT dc.user_id, NULL, NULL, NULL, NOW(),
-                 COALESCE((SELECT MIN(updated_at) FROM daily_counts WHERE user_id = dc.user_id), NOW())
-          FROM (SELECT DISTINCT user_id FROM daily_counts) dc
-          WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.user_id = dc.user_id)
-        `);
-        // Копируем каждую запись daily_counts как один «подход» в daily_adds (migrated=TRUE — не в рекорды).
-        // count > 1000 ограничиваем одним рядом 1000, чтобы не нарушать CHECK (1–1000).
-        await pool.query(`
-          INSERT INTO daily_adds (user_id, date, count, created_at, migrated)
-          SELECT user_id, date, LEAST(count, 1000), updated_at, TRUE
-          FROM daily_counts
-          WHERE count > 0
-        `);
-        await pool.query('COMMIT');
-      } catch (error) {
-        await pool.query('ROLLBACK');
-        throw error;
-      }
-    }
-
-    // Один раз наполнить shared_chats из daily_counts (кто в каком чате добавлял раньше). daily_counts больше нигде не используем.
-    const backfillSharedChatsKey = 'backfill_shared_chats_from_daily_counts_v1';
-    const backfillSharedCheck = await pool.query(
-      'SELECT 1 FROM migration_flags WHERE name = $1 LIMIT 1',
-      [backfillSharedChatsKey]
-    );
-    if (backfillSharedCheck.rowCount === 0) {
-      await pool.query('BEGIN');
-      try {
-        await pool.query(
-          'INSERT INTO migration_flags (name, applied_at) VALUES ($1, NOW())',
-          [backfillSharedChatsKey]
-        );
-        await pool.query(
-          `
-          INSERT INTO shared_chats (chat_id, user_id, created_at)
-          SELECT DISTINCT dc.chat_id, dc.user_id, NOW()
-          FROM daily_counts dc
-          WHERE EXISTS (SELECT 1 FROM users u WHERE u.user_id = dc.user_id)
-          ON CONFLICT (chat_id, user_id) DO NOTHING
-          `
-        );
-        await pool.query('COMMIT');
-      } catch (error) {
-        await pool.query('ROLLBACK');
-        throw error;
-      }
-    }
+    // No reads from daily_counts: runtime uses daily_adds only.
   } finally {
     await pool.query('SELECT pg_advisory_unlock($1)', [lockId]);
   }
@@ -394,138 +328,45 @@ async function updateRecord({ chatId, userId, count, date }) {
 }
 
 async function getStatusByDate(chatId, date) {
-  const sharedUsers = await getSharedUserIdsByChat(chatId);
-  if (!sharedUsers.length) {
-    const result = await pool.query(
-      `
-        SELECT
-          dc.user_id,
-          dc.count,
-          u.username,
-          u.first_name,
-          u.last_name
-        FROM daily_counts dc
-        LEFT JOIN users u ON u.user_id = dc.user_id
-        WHERE dc.chat_id = $1 AND dc.date = $2
-        ORDER BY dc.count DESC, dc.user_id ASC
-      `,
-      [chatId, date]
-    );
-
-    return result.rows;
-  }
-
-  const sharedResult = await pool.query(
-    `
-      SELECT
-        su.user_id,
-        COALESCE(SUM(dc.count), 0) AS count,
-        u.username,
-        u.first_name,
-        u.last_name
-      FROM (
-        SELECT UNNEST($1::bigint[]) AS user_id
-      ) su
-      LEFT JOIN daily_counts dc
-        ON dc.user_id = su.user_id
-       AND dc.date = $2
-      LEFT JOIN users u ON u.user_id = su.user_id
-      GROUP BY su.user_id, u.username, u.first_name, u.last_name
-    `,
-    [sharedUsers, date]
-  );
-
-  const localResult = await pool.query(
-    `
-      SELECT
-        dc.user_id,
-        dc.count,
-        u.username,
-        u.first_name,
-        u.last_name
-      FROM daily_counts dc
-      LEFT JOIN users u ON u.user_id = dc.user_id
-      WHERE dc.chat_id = $1
-        AND dc.date = $2
-        AND dc.user_id <> ALL($3)
-    `,
-    [chatId, date, sharedUsers]
-  );
-
-  const rows = sharedResult.rows.concat(localResult.rows);
-  rows.sort((a, b) => {
-    if (b.count !== a.count) {
-      return Number(b.count) - Number(a.count);
-    }
-    return String(a.user_id).localeCompare(String(b.user_id));
-  });
-
-  return rows;
+  const chatUserIds = await getSharedUserIdsByChat(chatId);
+  const rows = await getStatusByDateV2(chatUserIds, date);
+  return rows.map((row) => ({
+    user_id: row.user_id,
+    count: Number(row.total || 0),
+    username: row.username ?? null,
+    first_name: null,
+    last_name: null,
+  }));
 }
 
 async function getUserHistory(chatId, userId) {
   const isShared = await isUserSharedInChat(chatId, userId);
   if (!isShared) {
-    const result = await pool.query(
-      `
-        SELECT
-          date,
-          count
-        FROM daily_counts
-        WHERE chat_id = $1 AND user_id = $2
-        ORDER BY date ASC
-      `,
-      [chatId, userId]
-    );
-
-    return result.rows;
+    return [];
   }
-
-  const result = await pool.query(
-    `
-      SELECT
-        dc.date,
-        SUM(dc.count) AS count
-      FROM daily_counts dc
-      WHERE dc.user_id = $1
-      GROUP BY dc.date
-      ORDER BY dc.date ASC
-    `,
-    [userId]
-  );
-
-  return result.rows;
+  const rows = await getHistoryByUserIdV2(userId);
+  return rows.map((row) => ({
+    date: row.date,
+    count: Number(row.total || 0),
+  }));
 }
 
 async function hasUserReached100(chatId, userId) {
   const isShared = await isUserSharedInChat(chatId, userId);
   if (!isShared) {
-    const result = await pool.query(
-      `
-        SELECT 1
-        FROM daily_counts
-        WHERE chat_id = $1
-          AND user_id = $2
-          AND count >= 100
-        LIMIT 1
-      `,
-      [chatId, userId]
-    );
-
-    return result.rowCount > 0;
+    return false;
   }
-
   const result = await pool.query(
     `
       SELECT 1
-      FROM daily_counts
+      FROM daily_adds
       WHERE user_id = $1
-        AND count >= 100
+      GROUP BY date
+      HAVING SUM(count) >= 100
       LIMIT 1
     `,
     [userId]
   );
-
   return result.rowCount > 0;
 }
 
@@ -659,42 +500,17 @@ async function getUserById(userId) {
 }
 
 async function getRecordsByChat(chatId) {
-  const result = await pool.query(
-    `
-      WITH eligible_users AS (
-        SELECT DISTINCT user_id
-        FROM daily_counts
-        WHERE chat_id = $1
-        UNION
-        SELECT user_id
-        FROM shared_chats
-        WHERE chat_id = $1
-      ),
-      best_records AS (
-        SELECT
-          ur.user_id,
-          ur.max_add,
-          ur.record_date,
-          ur.record_count
-        FROM user_records ur
-        JOIN eligible_users eu ON eu.user_id = ur.user_id
-      )
-      SELECT
-        br.user_id,
-        br.max_add,
-        br.record_date,
-        br.record_count,
-        u.username,
-        u.first_name,
-        u.last_name
-      FROM best_records br
-      LEFT JOIN users u ON u.user_id = br.user_id
-      ORDER BY br.record_count DESC, br.user_id ASC
-    `,
-    [chatId]
-  );
-
-  return result.rows;
+  const chatUserIds = await getSharedUserIdsByChat(chatId);
+  const rows = await getRecordsByChatV2(chatUserIds);
+  return rows.map((row) => ({
+    user_id: row.user_id,
+    max_add: Number(row.best_approach || 0),
+    record_date: row.best_day_date || null,
+    record_count: Number(row.best_day_total || 0),
+    username: row.username ?? null,
+    first_name: null,
+    last_name: null,
+  }));
 }
 
 async function createApiToken(chatId, token) {
