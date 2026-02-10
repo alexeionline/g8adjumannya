@@ -75,12 +75,7 @@ const todayDateKey = computed(() => {
 
 const selectedChatLabel = computed(() => {
   const hit = data.chats.find((chat) => chat.id === data.selectedChatId)
-  return hit?.title || 'Current chat'
-})
-
-const targetInput = computed({
-  get: () => String(data.targetPerDay || 100),
-  set: (value) => data.setTargetPerDay(value),
+  return hit?.title || 'Текущий чат'
 })
 
 const todayTotal = computed(() => Number(data.historyDays?.[todayDateKey.value] || 0))
@@ -112,6 +107,13 @@ const myRank = computed(() => {
   const me = String(historyUserId.value || auth.defaultUserId || '')
   if (!me) return null
   const index = todayResults.value.findIndex((item) => String(item.key) === me)
+  return index >= 0 ? index + 1 : null
+})
+
+const myBestRank = computed(() => {
+  const me = String(historyUserId.value || auth.defaultUserId || '')
+  if (!me) return null
+  const index = leaderboard.value.findIndex((item) => String(item.key) === me)
   return index >= 0 ? index + 1 : null
 })
 
@@ -158,7 +160,7 @@ const calendarDays = computed(() => {
   for (let day = 1; day <= daysInMonth; day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const count = Number(data.historyDays?.[dateKey] || 0)
-    const tone = count >= Number(data.targetPerDay || 100) ? 'high' : count > 0 ? 'mid' : 'empty'
+    const tone = count >= 100 ? 'high' : count > 0 ? 'mid' : 'empty'
     result.push({ key: dateKey, value: day, tone, count })
   }
 
@@ -221,7 +223,7 @@ async function onChangeChat(event) {
     <div class="app-phone">
       <AppHeader
         title="G8 Adjumannya"
-        subtitle="sport-tech minimal / soft premium"
+        subtitle="Трекер челленджа"
       />
 
       <Alert v-if="!auth.isReady && !isDemo" variant="default">
@@ -239,11 +241,54 @@ async function onChangeChat(event) {
       <Card class="hero-card">
         <CardHeader class="hero-top">
           <div>
-            <p class="hero-kicker">Main dashboard</p>
-            <CardTitle class="hero-title">Today control center</CardTitle>
+            <p class="hero-kicker">Главный экран</p>
+            <CardTitle class="hero-title">Панель контроля за сегодня</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent class="hero-content">
+          <div class="hero-progress-row">
+            <div class="hero-progress-text">
+              <p class="hero-progress-label">Прогресс</p>
+              <p class="hero-progress-value">{{ todayTotal }} / {{ data.targetPerDay }}</p>
+            </div>
+            <div class="hero-progress-track" aria-hidden="true">
+              <span class="hero-progress-fill" :style="{ width: `${todayProgress}%` }" />
+            </div>
+            <p class="hero-progress-footnote">
+              <span v-if="targetDelta > 0">До цели осталось {{ targetDelta }}</span>
+              <span v-else>Цель выполнена. Продолжай в том же темпе.</span>
+            </p>
+          </div>
+
+          <div class="hero-metrics">
+            <div class="metric-pill">
+              <span class="metric-label">Текущая серия</span>
+              <span class="metric-value">{{ data.currentStreak }} д</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-label">Лучшая серия</span>
+              <span class="metric-value">{{ data.bestStreak }} д</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AddBlock
+        :user-input="addCountInput"
+        :target-value="data.targetPerDay"
+        :current-total="todayTotal"
+        @update:userInput="addCountInput = $event"
+        :on-submit="submitAdd"
+      />
+
+      <Card class="chat-context-card">
+        <CardHeader class="chat-context-header">
+          <div>
+            <CardTitle>Контекст чата</CardTitle>
+            <p class="chat-context-sub">{{ selectedChatLabel }}</p>
           </div>
           <div class="chat-switch">
-            <label class="chat-label" for="chat-select">Chat</label>
+            <label class="chat-label" for="chat-select">Чат</label>
             <select
               id="chat-select"
               class="chat-select"
@@ -257,54 +302,21 @@ async function onChangeChat(event) {
               >
                 {{ chat.title }}
               </option>
-              <option v-if="!data.chats.length" value="">Current chat</option>
+              <option v-if="!data.chats.length" value="">Текущий чат</option>
             </select>
           </div>
         </CardHeader>
-        <CardContent class="hero-content">
-          <div class="hero-progress-row">
-            <div class="hero-progress-text">
-              <p class="hero-progress-label">Progress</p>
-              <p class="hero-progress-value">{{ todayTotal }} / {{ data.targetPerDay }}</p>
-            </div>
-            <div class="hero-progress-track" aria-hidden="true">
-              <span class="hero-progress-fill" :style="{ width: `${todayProgress}%` }" />
-            </div>
-            <p class="hero-progress-footnote">
-              <span v-if="targetDelta > 0">{{ targetDelta }} left to goal</span>
-              <span v-else>Goal complete. Keep momentum.</span>
-            </p>
+        <CardContent class="chat-context-metrics">
+          <div class="context-pill">
+            <span class="context-label">Моё место сегодня</span>
+            <span class="context-value">{{ myRank ? `#${myRank}` : '—' }}</span>
           </div>
-
-          <div class="hero-metrics">
-            <div class="metric-pill">
-              <span class="metric-label">Current streak</span>
-              <span class="metric-value">{{ data.currentStreak }} d</span>
-            </div>
-            <div class="metric-pill">
-              <span class="metric-label">Best streak</span>
-              <span class="metric-value">{{ data.bestStreak }} d</span>
-            </div>
-            <div class="metric-pill">
-              <span class="metric-label">My rank</span>
-              <span class="metric-value">{{ myRank ? `#${myRank}` : '—' }}</span>
-            </div>
-            <div class="metric-pill metric-chat">
-              <span class="metric-label">Active chat</span>
-              <span class="metric-value metric-chat-title">{{ selectedChatLabel }}</span>
-            </div>
+          <div class="context-pill">
+            <span class="context-label">Моё место в рекордах</span>
+            <span class="context-value">{{ myBestRank ? `#${myBestRank}` : '—' }}</span>
           </div>
         </CardContent>
       </Card>
-
-      <AddBlock
-        :user-input="addCountInput"
-        :target-input="targetInput"
-        :current-total="todayTotal"
-        @update:userInput="addCountInput = $event"
-        @update:targetInput="targetInput = $event"
-        :on-submit="submitAdd"
-      />
 
       <TodayResults
         :items="todayResults"
@@ -314,27 +326,29 @@ async function onChangeChat(event) {
         :on-delete-approach="handleDeleteApproach"
       />
 
-      <Leaderboard :items="leaderboard" />
+      <Leaderboard
+        :items="leaderboard"
+      />
 
       <Card class="stats-card">
         <CardHeader>
-          <CardTitle>Stats</CardTitle>
+          <CardTitle>Статистика</CardTitle>
         </CardHeader>
         <CardContent class="stats-grid">
           <article class="stat-item">
-            <p class="stat-key">Days active</p>
+            <p class="stat-key">Дней активности</p>
             <p class="stat-value">{{ participationDays }}</p>
           </article>
           <article class="stat-item">
-            <p class="stat-key">Total reps</p>
+            <p class="stat-key">Всего повторений</p>
             <p class="stat-value">{{ totalPushups }}</p>
           </article>
           <article class="stat-item">
-            <p class="stat-key">Average</p>
+            <p class="stat-key">Среднее</p>
             <p class="stat-value">{{ averagePushups }}</p>
           </article>
           <article class="stat-item">
-            <p class="stat-key">Target</p>
+            <p class="stat-key">Цель</p>
             <p class="stat-value">{{ data.targetPerDay }}</p>
           </article>
         </CardContent>
@@ -392,36 +406,6 @@ async function onChangeChat(event) {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
   color: var(--foreground-strong);
-}
-
-.chat-switch {
-  display: grid;
-  gap: 0.25rem;
-  justify-items: end;
-}
-
-.chat-label {
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-foreground);
-}
-
-.chat-select {
-  width: min(11rem, 48vw);
-  min-height: 2.1rem;
-  border: 1px solid rgba(17, 53, 91, 0.14);
-  border-radius: 0.7rem;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--foreground);
-  font: inherit;
-  font-size: 0.78rem;
-  padding: 0.22rem 0.5rem;
-}
-
-.chat-select:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
 }
 
 .hero-content {
@@ -498,15 +482,80 @@ async function onChangeChat(event) {
   color: var(--foreground-strong);
 }
 
-.metric-chat {
-  grid-column: 1 / -1;
+.chat-context-card {
+  border: 0;
+  box-shadow: var(--shadow-soft);
 }
 
-.metric-chat-title {
-  font-size: 0.83rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.chat-context-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.chat-context-sub {
+  margin: 0.22rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+
+.chat-switch {
+  display: grid;
+  gap: 0.22rem;
+  justify-items: end;
+}
+
+.chat-label {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+.chat-select {
+  width: min(10.8rem, 46vw);
+  min-height: 2rem;
+  border: 1px solid rgba(17, 53, 91, 0.14);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.76rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.chat-select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.chat-context-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.52rem;
+}
+
+.context-pill {
+  border-radius: 0.84rem;
+  background: rgba(244, 249, 253, 0.94);
+  padding: 0.56rem 0.63rem;
+  display: grid;
+  gap: 0.22rem;
+  min-height: 3.2rem;
+}
+
+.context-label {
+  font-size: 0.68rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.context-value {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--foreground-strong);
 }
 
 .stats-card {

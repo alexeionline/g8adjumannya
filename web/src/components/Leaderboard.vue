@@ -9,8 +9,8 @@ defineProps({
 <template>
   <Card class="leader-card">
     <CardHeader class="leader-header">
-      <CardTitle>Records</CardTitle>
-      <p class="leader-sub">Best single set in this chat</p>
+      <CardTitle>Рекорды</CardTitle>
+      <p class="leader-sub">Лучший разовый подход в этом чате</p>
     </CardHeader>
     <CardContent>
       <ul v-if="items.length" class="leaderboard">
@@ -25,7 +25,7 @@ defineProps({
           <div class="value">{{ item.value }}</div>
         </li>
       </ul>
-      <div v-else class="leader-empty">No records yet</div>
+      <div v-else class="leader-empty">Пока нет рекордов</div>
     </CardContent>
   </Card>
 </template>

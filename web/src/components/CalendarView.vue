@@ -15,7 +15,7 @@ defineProps({
   <Card class="calendar-card">
     <CardHeader class="calendar-header">
       <div>
-        <CardTitle>Training map</CardTitle>
+        <CardTitle>Календарь тренировок</CardTitle>
         <p class="calendar-sub">{{ monthLabel }}</p>
       </div>
       <div class="calendar-nav">
@@ -141,7 +141,7 @@ defineProps({
 }
 
 .day.high {
-  background: color-mix(in oklab, var(--accent-strong) 48%, white 52%);
+  background: color-mix(in oklab, #22c55e 50%, white 50%);
 }
 
 .day-today {

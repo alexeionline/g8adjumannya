@@ -21,8 +21,8 @@ const DEMO_USERS = [
 ]
 
 const DEMO_CHATS = [
-  { id: '-10024588112', title: 'G8 Morning Team' },
-  { id: '-10019877221', title: 'Evening Fighters' },
+  { id: '-10024588112', title: 'G8 Утренняя команда' },
+  { id: '-10019877221', title: 'Вечерние бойцы' },
 ]
 
 function formatDateKey(date) {
@@ -42,7 +42,7 @@ function parseChat(raw, index = 0) {
   if (id == null) {
     return null
   }
-  const title = raw?.title ?? raw?.name ?? raw?.label ?? `Chat ${index + 1}`
+  const title = raw?.title ?? raw?.name ?? raw?.label ?? `Чат ${index + 1}`
   return {
     id: String(id),
     title: String(title),
@@ -64,6 +64,34 @@ function normalizeChats(payload) {
 
   const uniqMap = new Map(parsed.map((item) => [item.id, item]))
   return Array.from(uniqMap.values())
+}
+
+function normalizeStatusRows(rows) {
+  return (rows || [])
+    .map((row) => ({
+      ...row,
+      user_id: Number(row.user_id),
+      username: row.username ?? row.display_name ?? null,
+      first_name: row.first_name ?? null,
+      last_name: row.last_name ?? null,
+      count: Number(row.count ?? row.total ?? 0),
+      approaches: Array.isArray(row.approaches) ? row.approaches : [],
+    }))
+    .filter((row) => Number(row.count || 0) > 0)
+}
+
+function normalizeRecordsRows(rows) {
+  return (rows || [])
+    .map((row) => ({
+      ...row,
+      user_id: Number(row.user_id),
+      username: row.username ?? row.display_name ?? null,
+      first_name: row.first_name ?? null,
+      last_name: row.last_name ?? null,
+      max_add: Number(row.max_add ?? row.best_approach ?? 0),
+      record_date: row.record_date ?? row.best_day_date ?? null,
+    }))
+    .sort((a, b) => Number(b.max_add || 0) - Number(a.max_add || 0))
 }
 
 function computeStreaks(days, target) {
@@ -367,7 +395,7 @@ export const useDataStore = defineStore('data', {
         }
       } catch {
         this.chats = this.selectedChatId
-          ? [{ id: this.selectedChatId, title: 'Current chat' }]
+          ? [{ id: this.selectedChatId, title: 'Текущий чат' }]
           : []
       }
     },
@@ -392,8 +420,7 @@ export const useDataStore = defineStore('data', {
         }
         auth.selectedChatId = this.selectedChatId || auth.selectedChatId || ''
         const data = await fetchStatus(auth, date)
-        const rows = data.rows || []
-        this.statusRows = rows.filter((r) => (r.count ?? r.total ?? 0) > 0)
+        this.statusRows = normalizeStatusRows(data.rows)
       } catch (error) {
         this.error = extractErrorMessage(error)
       } finally {
@@ -411,7 +438,7 @@ export const useDataStore = defineStore('data', {
         }
         auth.selectedChatId = this.selectedChatId || auth.selectedChatId || ''
         const data = await fetchRecords(auth)
-        this.recordsRows = data.rows || []
+        this.recordsRows = normalizeRecordsRows(data.rows)
       } catch (error) {
         this.error = extractErrorMessage(error)
       } finally {
