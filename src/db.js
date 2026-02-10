@@ -100,12 +100,7 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS daily_adds_created_at_idx ON daily_adds (created_at);
     `);
 
-    await pool.query(`
-      DROP TABLE IF EXISTS migration_flags;
-      DROP TABLE IF EXISTS records;
-      DROP TABLE IF EXISTS user_records;
-      DROP TABLE IF EXISTS daily_counts;
-    `);
+    // Legacy table cleanup must be run manually after explicit production checks.
   } finally {
     await pool.query('SELECT pg_advisory_unlock($1)', [lockId]);
   }
