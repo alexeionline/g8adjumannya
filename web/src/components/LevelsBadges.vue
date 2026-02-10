@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { buildBadgesMetrics, buildChallengeBadges } from '@/lib/badges'
 
@@ -23,6 +23,12 @@ const badges = computed(() => {
 })
 
 const unlockedCount = computed(() => badges.value.filter((item) => item.achieved).length)
+const filter = ref('all')
+const filteredBadges = computed(() => {
+  if (filter.value === 'done') return badges.value.filter((item) => item.achieved)
+  if (filter.value === 'open') return badges.value.filter((item) => !item.achieved)
+  return badges.value
+})
 
 function badgeToneClass(tone) {
   return {
@@ -42,11 +48,37 @@ function badgeToneClass(tone) {
         <CardTitle>Бейджи челленджа</CardTitle>
         <p class="badges-sub">Открыто {{ unlockedCount }} из {{ badges.length }} бейджей</p>
       </div>
+      <div class="badges-filters" role="tablist" aria-label="Фильтр наград">
+        <button
+          type="button"
+          class="filter-btn"
+          :class="{ active: filter === 'all' }"
+          @click="filter = 'all'"
+        >
+          Все
+        </button>
+        <button
+          type="button"
+          class="filter-btn"
+          :class="{ active: filter === 'done' }"
+          @click="filter = 'done'"
+        >
+          Завершенные
+        </button>
+        <button
+          type="button"
+          class="filter-btn"
+          :class="{ active: filter === 'open' }"
+          @click="filter = 'open'"
+        >
+          Открытые
+        </button>
+      </div>
     </CardHeader>
     <CardContent>
-      <ul class="badges-grid">
+      <ul v-if="filteredBadges.length" class="badges-grid">
         <li
-          v-for="badge in badges"
+          v-for="badge in filteredBadges"
           :key="badge.id"
           class="badge-item"
           :class="[
@@ -84,6 +116,7 @@ function badgeToneClass(tone) {
           </div>
         </li>
       </ul>
+      <p v-else class="badges-empty">В этой категории пока нет наград</p>
     </CardContent>
   </Card>
 </template>
@@ -100,12 +133,48 @@ function badgeToneClass(tone) {
   color: var(--muted-foreground);
 }
 
+.badges-filters {
+  margin-top: 0.65rem;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filter-btn {
+  border: 1px solid rgba(20, 58, 95, 0.14);
+  background: rgba(243, 248, 253, 0.94);
+  color: var(--foreground);
+  border-radius: 999px;
+  padding: 0.25rem 0.62rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.filter-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(232, 244, 255, 0.94);
+}
+
+.filter-btn.active {
+  background: linear-gradient(120deg, rgba(14, 165, 233, 0.16), rgba(59, 130, 246, 0.2));
+  border-color: rgba(14, 165, 233, 0.35);
+}
+
 .badges-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: 0.52rem;
+}
+
+.badges-empty {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
 }
 
 .badge-item {

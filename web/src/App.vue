@@ -260,54 +260,26 @@ function moveMonth(direction) {
   monthCursor.value = next
 }
 
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2
-}
-
-function scrollWithOffset(targetRef, offsetPx = 20) {
+function scrollWithOffset(targetRef) {
   const el = targetRef?.value
   if (!el) return
-
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const targetTop = Math.max(0, el.getBoundingClientRect().top + window.scrollY - offsetPx)
-
-  if (prefersReducedMotion) {
-    window.scrollTo(0, targetTop)
-    return
-  }
-
-  const startTop = window.scrollY
-  const distance = targetTop - startTop
-  const durationMs = 560
-  const startTs = performance.now()
-
-  function step(ts) {
-    const elapsed = ts - startTs
-    const progress = Math.min(1, elapsed / durationMs)
-    const eased = easeInOutCubic(progress)
-    window.scrollTo(0, startTop + distance * eased)
-    if (progress < 1) {
-      window.requestAnimationFrame(step)
-    }
-  }
-
-  window.requestAnimationFrame(step)
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function scrollToBadges() {
-  scrollWithOffset(badgesAnchorRef, 20)
+  scrollWithOffset(badgesAnchorRef)
 }
 
 function scrollToTodayResults() {
-  scrollWithOffset(todayResultsAnchorRef, 20)
+  scrollWithOffset(todayResultsAnchorRef)
 }
 
 function scrollToLeaderboard() {
-  scrollWithOffset(leaderboardAnchorRef, 20)
+  scrollWithOffset(leaderboardAnchorRef)
 }
 
 function scrollToCalendar() {
-  scrollWithOffset(calendarAnchorRef, 20)
+  scrollWithOffset(calendarAnchorRef)
 }
 
 async function onChangeChat(event) {
@@ -422,7 +394,7 @@ async function onChangeChat(event) {
         </CardContent>
       </Card>
 
-      <div ref="todayResultsAnchorRef">
+      <div ref="todayResultsAnchorRef" class="anchor-target">
         <TodayResults
           :items="todayResults"
           :goal="data.targetPerDay"
@@ -433,7 +405,7 @@ async function onChangeChat(event) {
         />
       </div>
 
-      <div ref="leaderboardAnchorRef">
+      <div ref="leaderboardAnchorRef" class="anchor-target">
         <Leaderboard
           :items="leaderboard"
         />
@@ -463,7 +435,7 @@ async function onChangeChat(event) {
         </CardContent>
       </Card>
 
-      <div ref="calendarAnchorRef">
+      <div ref="calendarAnchorRef" class="anchor-target">
         <CalendarView
           :month-label="monthLabel"
           :days="calendarDays"
@@ -473,7 +445,7 @@ async function onChangeChat(event) {
         />
       </div>
 
-      <div ref="badgesAnchorRef">
+      <div ref="badgesAnchorRef" class="anchor-target">
         <LevelsBadges
           :history-days="data.historyDays"
           :best-approach="myBestApproach"
@@ -486,6 +458,10 @@ async function onChangeChat(event) {
 <style scoped>
 .app-shell {
   width: 100%;
+}
+
+.anchor-target {
+  scroll-margin-top: 20px;
 }
 
 .app-phone {
