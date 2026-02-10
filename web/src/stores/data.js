@@ -398,6 +398,51 @@ function buildApproachesDaysFromHistory(days) {
   }, {})
 }
 
+function normalizeApiDateKey(value) {
+  if (value == null) return ''
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+    const isoMatch = value.match(/^(\d{4}-\d{2}-\d{2})T/)
+    if (isoMatch) return isoMatch[1]
+    return ''
+  }
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toISOString().slice(0, 10)
+}
+
+function buildTimeOfDayPushups(rows) {
+  let morning = 0
+  let day = 0
+  let evening = 0
+
+  ;(rows || []).forEach((entry) => {
+    if (entry?.migrated) return
+    const count = Number(entry?.count || 0)
+    if (!Number.isFinite(count) || count <= 0) return
+    if (!entry?.created_at) return
+
+    const created = new Date(entry.created_at)
+    if (Number.isNaN(created.getTime())) return
+
+    const hour = created.getHours()
+    if (hour < 12) {
+      morning += count
+    } else if (hour < 18) {
+      day += count
+    } else {
+      evening += count
+    }
+  })
+
+  return {
+    morning,
+    day,
+    evening,
+    total: morning + day + evening,
+  }
+}
+
 export const useDataStore = defineStore('data', {
   state: () => ({
     loading: false,
@@ -406,6 +451,7 @@ export const useDataStore = defineStore('data', {
     recordsRows: [],
     historyDays: {},
     historyApproachesDays: {},
+    timeOfDayPushups: { morning: 0, day: 0, evening: 0, total: 0 },
     demoReady: false,
     demoUserId: DEMO_USERS[0].user_id,
     chats: [],
@@ -451,6 +497,7 @@ export const useDataStore = defineStore('data', {
         this.recordsRows = []
         this.historyDays = {}
         this.historyApproachesDays = {}
+        this.timeOfDayPushups = { morning: 0, day: 0, evening: 0, total: 0 }
         this.currentDateKey = formatDateKey(new Date())
         this.recalculateStreaks()
         return
@@ -463,6 +510,9 @@ export const useDataStore = defineStore('data', {
       const myRow = pack.statusRows.find((row) => Number(row.user_id) === Number(this.demoUserId))
       if (myRow) {
         this.historyApproachesDays[this.currentDateKey] = Array.isArray(myRow.approaches) ? myRow.approaches.length : 0
+        this.timeOfDayPushups = buildTimeOfDayPushups(myRow.approaches || [])
+      } else {
+        this.timeOfDayPushups = { morning: 0, day: 0, evening: 0, total: 0 }
       }
       this.recalculateStreaks()
     },
@@ -594,6 +644,7 @@ export const useDataStore = defineStore('data', {
     async loadHistoryApproaches(auth, userId) {
       if (!userId) {
         this.historyApproachesDays = {}
+        this.timeOfDayPushups = { morning: 0, day: 0, evening: 0, total: 0 }
         return
       }
       if (DEMO_MODE) {
@@ -603,6 +654,7 @@ export const useDataStore = defineStore('data', {
       }
       if (String(userId) !== String(auth?.defaultUserId || '')) {
         this.historyApproachesDays = {}
+        this.timeOfDayPushups = { morning: 0, day: 0, evening: 0, total: 0 }
         return
       }
       try {
@@ -613,14 +665,17 @@ export const useDataStore = defineStore('data', {
         const rows = await fetchApproaches(auth, start, end)
         const map = {}
         ;(rows || []).forEach((entry) => {
-          const key = String(entry?.date || '')
+          if (entry?.migrated) return
+          const key = normalizeApiDateKey(entry?.date)
           if (!key) return
           map[key] = Number(map[key] || 0) + 1
         })
         this.historyApproachesDays = map
+        this.timeOfDayPushups = buildTimeOfDayPushups(rows)
       } catch {
         // v1 API may not have /approaches; keep map empty without surfacing an error.
         this.historyApproachesDays = {}
+        this.timeOfDayPushups = { morning: 0, day: 0, evening: 0, total: 0 }
       }
     },
     async addCount(auth, userId, delta) {

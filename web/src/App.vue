@@ -240,6 +240,19 @@ const averagePushups = computed(() => {
   }
   return (totalPushups.value / participationDays.value).toFixed(1)
 })
+const dayPeriodShare = computed(() => {
+  const source = data.timeOfDayPushups || {}
+  const total = Number(source.total || 0)
+  if (!total) {
+    return { morning: '0%', day: '0%', evening: '0%' }
+  }
+  const toPct = (value) => `${Math.round((Number(value || 0) / total) * 100)}%`
+  return {
+    morning: toPct(source.morning),
+    day: toPct(source.day),
+    evening: toPct(source.evening),
+  }
+})
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -462,8 +475,12 @@ async function onChangeChat(event) {
             <p class="stat-value">{{ averagePushups }}</p>
           </article>
           <article class="stat-item">
-            <p class="stat-key">Цель</p>
-            <p class="stat-value">{{ data.targetPerDay }}</p>
+            <p class="stat-key">Время суток</p>
+            <div class="stat-dayparts">
+              <p class="daypart-row"><span>Утро (до 12)</span><strong>{{ dayPeriodShare.morning }}</strong></p>
+              <p class="daypart-row"><span>День (до 18)</span><strong>{{ dayPeriodShare.day }}</strong></p>
+              <p class="daypart-row"><span>Вечер (до 23:59)</span><strong>{{ dayPeriodShare.evening }}</strong></p>
+            </div>
           </article>
         </CardContent>
       </Card>
@@ -791,6 +808,27 @@ async function onChangeChat(event) {
   font-size: 1.15rem;
   line-height: 1;
   color: var(--foreground-strong);
+}
+
+.stat-dayparts {
+  margin-top: 0.28rem;
+  display: grid;
+  gap: 0.16rem;
+}
+
+.daypart-row {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.69rem;
+  color: var(--muted-foreground);
+}
+
+.daypart-row strong {
+  color: var(--foreground-strong);
+  font-size: 0.75rem;
 }
 
 @media (min-width: 620px) {

@@ -53,7 +53,7 @@ defineProps({
         >
           <template v-if="day.value">
             <span class="day-number">{{ day.value }}</span>
-            <span v-if="day.count > 0" class="day-count">{{ day.count }} · {{ day.approachesCount || 0 }}п</span>
+            <span v-if="day.count > 0" class="day-count">{{ day.count }} · {{ day.approachesCount || 0 }}</span>
           </template>
         </div>
       </div>
