@@ -138,7 +138,6 @@ function elapsedTitle(prev, cur) {
             <div class="today-body">
               <div class="today-title-row">
                 <div class="today-username">{{ item.label }}</div>
-                <span class="today-count-chip">{{ item.value }}</span>
               </div>
               <div class="today-approaches">
                 <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
@@ -281,16 +280,6 @@ function elapsedTitle(prev, cur) {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-}
-
-.today-count-chip {
-  flex-shrink: 0;
-  border-radius: 999px;
-  padding: 0.08rem 0.45rem;
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: var(--foreground-strong);
-  background: rgba(14, 165, 233, 0.16);
 }
 
 .today-approaches {
