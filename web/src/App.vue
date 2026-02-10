@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert'
 import { useAuthStore } from './stores/auth'
 import { useDataStore } from './stores/data'
+import { buildBadgesMetrics, buildChallengeBadges } from './lib/badges'
 
 const auth = useAuthStore()
 const data = useDataStore()
@@ -18,6 +19,10 @@ const isDemo = import.meta.env.VITE_DEMO === '1'
 const monthCursor = ref(new Date())
 const historyUserId = ref('')
 const addCountInput = ref('')
+const badgesAnchorRef = ref(null)
+const todayResultsAnchorRef = ref(null)
+const leaderboardAnchorRef = ref(null)
+const calendarAnchorRef = ref(null)
 
 function getLocalDateKey() {
   const d = new Date()
@@ -143,6 +148,9 @@ const myBestApproach = computed(() => {
 
   return Math.max(Number(bestFromRecords || 0), Number(bestFromTodayApproaches || 0))
 })
+const badgeMetrics = computed(() => buildBadgesMetrics(data.historyDays, myBestApproach.value))
+const allBadges = computed(() => buildChallengeBadges(badgeMetrics.value))
+const unlockedBadges = computed(() => allBadges.value.filter((item) => item.achieved).length)
 
 const editableUserId = computed(() => {
   if (isDemo) {
@@ -252,6 +260,22 @@ function moveMonth(direction) {
   monthCursor.value = next
 }
 
+function scrollToBadges() {
+  badgesAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function scrollToTodayResults() {
+  todayResultsAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function scrollToLeaderboard() {
+  leaderboardAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function scrollToCalendar() {
+  calendarAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 async function onChangeChat(event) {
   const chatId = event?.target?.value || ''
   data.setSelectedChat(auth, chatId)
@@ -303,14 +327,18 @@ async function onChangeChat(event) {
           </div>
 
           <div class="hero-metrics">
-            <div class="metric-pill">
+            <button type="button" class="metric-pill metric-pill-button" @click="scrollToCalendar">
               <span class="metric-label">Текущая серия</span>
               <span class="metric-value">{{ data.currentStreak }} д</span>
-            </div>
-            <div class="metric-pill">
+            </button>
+            <button type="button" class="metric-pill metric-pill-button" @click="scrollToCalendar">
               <span class="metric-label">Лучшая серия</span>
               <span class="metric-value">{{ data.bestStreak }} д</span>
-            </div>
+            </button>
+            <button type="button" class="metric-pill metric-pill-button" @click="scrollToBadges">
+              <span class="metric-label">Награды</span>
+              <span class="metric-value">{{ unlockedBadges }} из {{ allBadges.length }}</span>
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -349,29 +377,33 @@ async function onChangeChat(event) {
           </div>
         </CardHeader>
         <CardContent class="chat-context-metrics">
-          <div class="context-pill">
+          <button type="button" class="context-pill context-pill-button" @click="scrollToTodayResults">
             <span class="context-label">Моё место сегодня</span>
             <span class="context-value">{{ myRank ? `#${myRank}` : '—' }}</span>
-          </div>
-          <div class="context-pill">
+          </button>
+          <button type="button" class="context-pill context-pill-button" @click="scrollToLeaderboard">
             <span class="context-label">Моё место в рекордах</span>
             <span class="context-value">{{ myBestRank ? `#${myBestRank}` : '—' }}</span>
-          </div>
+          </button>
         </CardContent>
       </Card>
 
-      <TodayResults
-        :items="todayResults"
-        :goal="data.targetPerDay"
-        :editable-user-id="editableUserId"
-        :on-refresh="refreshToday"
-        :on-update-approach="handleUpdateApproach"
-        :on-delete-approach="handleDeleteApproach"
-      />
+      <div ref="todayResultsAnchorRef">
+        <TodayResults
+          :items="todayResults"
+          :goal="data.targetPerDay"
+          :editable-user-id="editableUserId"
+          :on-refresh="refreshToday"
+          :on-update-approach="handleUpdateApproach"
+          :on-delete-approach="handleDeleteApproach"
+        />
+      </div>
 
-      <Leaderboard
-        :items="leaderboard"
-      />
+      <div ref="leaderboardAnchorRef">
+        <Leaderboard
+          :items="leaderboard"
+        />
+      </div>
 
       <Card class="stats-card">
         <CardHeader>
@@ -397,18 +429,22 @@ async function onChangeChat(event) {
         </CardContent>
       </Card>
 
-      <CalendarView
-        :month-label="monthLabel"
-        :days="calendarDays"
-        :today-key="todayDateKey"
-        :on-prev="() => moveMonth(-1)"
-        :on-next="() => moveMonth(1)"
-      />
+      <div ref="calendarAnchorRef">
+        <CalendarView
+          :month-label="monthLabel"
+          :days="calendarDays"
+          :today-key="todayDateKey"
+          :on-prev="() => moveMonth(-1)"
+          :on-next="() => moveMonth(1)"
+        />
+      </div>
 
-      <LevelsBadges
-        :history-days="data.historyDays"
-        :best-approach="myBestApproach"
-      />
+      <div ref="badgesAnchorRef">
+        <LevelsBadges
+          :history-days="data.historyDays"
+          :best-approach="myBestApproach"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -504,7 +540,7 @@ async function onChangeChat(event) {
 
 .hero-metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.52rem;
 }
 
@@ -515,6 +551,25 @@ async function onChangeChat(event) {
   display: grid;
   gap: 0.22rem;
   min-height: 3.2rem;
+}
+
+.metric-pill-button {
+  border: 0;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.metric-pill-button:hover {
+  transform: translateY(-1px);
+  background: rgba(232, 244, 255, 0.98);
+}
+
+.metric-pill-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
 }
 
 .metric-label {
@@ -591,6 +646,25 @@ async function onChangeChat(event) {
   display: grid;
   gap: 0.22rem;
   min-height: 3.2rem;
+}
+
+.context-pill-button {
+  border: 0;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.context-pill-button:hover {
+  transform: translateY(-1px);
+  background: rgba(232, 244, 255, 0.98);
+}
+
+.context-pill-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
 }
 
 .context-label {
