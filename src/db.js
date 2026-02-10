@@ -23,16 +23,6 @@ async function initDb() {
         updated_at TIMESTAMPTZ NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS daily_counts (
-        chat_id BIGINT NOT NULL,
-        user_id BIGINT NOT NULL,
-        date DATE NOT NULL,
-        count INTEGER NOT NULL DEFAULT 0,
-        updated_at TIMESTAMPTZ NOT NULL,
-        PRIMARY KEY (chat_id, user_id, date),
-        FOREIGN KEY (user_id) REFERENCES users (user_id)
-      );
-
       CREATE TABLE IF NOT EXISTS shared_chats (
         chat_id BIGINT NOT NULL,
         user_id BIGINT NOT NULL,
@@ -47,36 +37,10 @@ async function initDb() {
         updated_at TIMESTAMPTZ NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS records (
-        chat_id BIGINT NOT NULL,
-        user_id BIGINT NOT NULL,
-        max_add INTEGER NOT NULL DEFAULT 0,
-        record_count INTEGER NOT NULL DEFAULT 0,
-        record_date DATE NOT NULL,
-        max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE,
-        updated_at TIMESTAMPTZ NOT NULL,
-        PRIMARY KEY (chat_id, user_id),
-        FOREIGN KEY (user_id) REFERENCES users (user_id)
-      );
-
-      CREATE TABLE IF NOT EXISTS user_records (
-        user_id BIGINT PRIMARY KEY,
-        max_add INTEGER NOT NULL DEFAULT 0,
-        record_count INTEGER NOT NULL DEFAULT 0,
-        record_date DATE NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (user_id)
-      );
-
       CREATE TABLE IF NOT EXISTS api_tokens (
         token TEXT PRIMARY KEY,
         chat_id BIGINT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS migration_flags (
-        name TEXT PRIMARY KEY,
-        applied_at TIMESTAMPTZ NOT NULL
       );
     `);
 
@@ -137,66 +101,11 @@ async function initDb() {
     `);
 
     await pool.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'records' AND column_name = 'max_add'
-        ) THEN
-          ALTER TABLE records ADD COLUMN max_add INTEGER NOT NULL DEFAULT 0;
-          UPDATE records SET max_add = record_count;
-        END IF;
-
-        IF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'records' AND column_name = 'record_count'
-        ) THEN
-          ALTER TABLE records ADD COLUMN record_count INTEGER NOT NULL DEFAULT 0;
-          UPDATE records SET record_count = max_add;
-        END IF;
-
-        IF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'records' AND column_name = 'max_add_initialized'
-        ) THEN
-          ALTER TABLE records ADD COLUMN max_add_initialized BOOLEAN NOT NULL DEFAULT FALSE;
-        END IF;
-      END $$;
+      DROP TABLE IF EXISTS migration_flags;
+      DROP TABLE IF EXISTS records;
+      DROP TABLE IF EXISTS user_records;
+      DROP TABLE IF EXISTS daily_counts;
     `);
-
-    await pool.query(`
-      UPDATE records
-      SET max_add = 0,
-          record_count = 0,
-          record_date = CURRENT_DATE,
-          max_add_initialized = TRUE
-      WHERE max_add_initialized IS DISTINCT FROM TRUE;
-    `);
-
-    await pool.query(`
-      INSERT INTO user_records (user_id, max_add, record_count, record_date, updated_at)
-      SELECT DISTINCT ON (user_id)
-        user_id,
-        max_add,
-        record_count,
-        record_date,
-        updated_at
-      FROM records
-      ORDER BY user_id, record_count DESC, max_add DESC, record_date DESC
-      ON CONFLICT (user_id) DO UPDATE SET
-        max_add = GREATEST(user_records.max_add, excluded.max_add),
-        record_count = GREATEST(user_records.record_count, excluded.record_count),
-        record_date = CASE
-          WHEN excluded.record_count > user_records.record_count THEN excluded.record_date
-          ELSE user_records.record_date
-        END,
-        updated_at = excluded.updated_at;
-    `);
-
-    // No reads from daily_counts: runtime uses daily_adds only.
   } finally {
     await pool.query('SELECT pg_advisory_unlock($1)', [lockId]);
   }
@@ -222,22 +131,8 @@ async function upsertUser(from) {
   );
 }
 
-async function addCount({ chatId, userId, date, delta, createdAt }) {
+async function addCount({ userId, date, delta, createdAt }) {
   const now = new Date().toISOString();
-  const writeChatId = await resolveWriteChatId(chatId, userId);
-  const result = await pool.query(
-    `
-      INSERT INTO daily_counts (chat_id, user_id, date, count, updated_at)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT(chat_id, user_id, date) DO UPDATE SET
-        count = daily_counts.count + excluded.count,
-        updated_at = excluded.updated_at
-      RETURNING count
-    `,
-    [writeChatId, userId, date, delta, now]
-  );
-
-  // Двойная запись в daily_adds: данные из бота / v1 API видны и в v2 (history, status).
   // createdAt — для нескольких подходов подряд: каждый следующий на минуту позже предыдущего.
   if (delta > 0 && delta <= 1000) {
     const created = createdAt != null ? createdAt : now;
@@ -247,37 +142,10 @@ async function addCount({ chatId, userId, date, delta, createdAt }) {
         VALUES ($1, $2, $3, $4, FALSE)
       `,
       [userId, date, delta, created]
-    ).catch((err) => {
-      console.error('addCount: daily_adds insert failed (v2 sync):', err.message);
-    });
+    );
   }
 
-  return result.rows[0] ? result.rows[0].count : 0;
-}
-
-async function updateRecord({ chatId, userId, count, date }) {
-  const now = new Date().toISOString();
-  await pool.query(
-    `
-      INSERT INTO user_records (
-        user_id,
-        max_add,
-        record_count,
-        record_date,
-        updated_at
-      )
-      VALUES ($1, $2, $2, $3, $4)
-      ON CONFLICT(user_id) DO UPDATE SET
-        max_add = GREATEST(user_records.max_add, excluded.max_add),
-        record_count = GREATEST(user_records.record_count, excluded.record_count),
-        record_date = CASE
-          WHEN excluded.record_count > user_records.record_count THEN excluded.record_date
-          ELSE user_records.record_date
-        END,
-        updated_at = excluded.updated_at
-    `,
-    [userId, count, date, now]
-  );
+  return getTotalForUserDateV2(userId, date);
 }
 
 async function hasUserReached100(chatId, userId) {
@@ -319,19 +187,6 @@ async function removeSharedChat(chatId, userId) {
     `,
     [chatId, userId]
   );
-}
-
-async function getCanonicalSharedChatId(userId) {
-  const result = await pool.query(
-    `
-      SELECT MIN(chat_id) AS chat_id
-      FROM shared_chats
-      WHERE user_id = $1
-    `,
-    [userId]
-  );
-
-  return result.rows[0] ? result.rows[0].chat_id : null;
 }
 
 async function getSharedUserIdsByChat(chatId) {
@@ -399,15 +254,6 @@ async function upsertChatMeta(chatId, title) {
     `,
     [chatId, title ?? null, now]
   );
-}
-
-async function resolveWriteChatId(chatId, userId) {
-  const isShared = await isUserSharedInChat(chatId, userId);
-  if (!isShared) {
-    return chatId;
-  }
-  const canonicalChatId = await getCanonicalSharedChatId(userId);
-  return canonicalChatId || chatId;
 }
 
 async function getUserById(userId) {
@@ -797,17 +643,14 @@ function getDisplayNameV2(row) {
 module.exports = {
   initDb,
   addCount,
-  updateRecord,
   hasUserReached100,
   addSharedChat,
   removeSharedChat,
-  getCanonicalSharedChatId,
   getSharedUserIdsByChat,
   getSharedChatsByUser,
   getChatMeta,
   upsertChatMeta,
   isUserSharedInChat,
-  resolveWriteChatId,
   getUserById,
   createApiToken,
   getChatIdByToken,

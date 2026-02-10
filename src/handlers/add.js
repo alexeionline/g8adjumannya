@@ -4,7 +4,6 @@ function createAddHandler({
   addSharedChat,
   addCount,
   getTotalForUserDateV2,
-  updateRecord,
   hasUserReached100,
   formatDisplayName,
   formatAddHeader,
@@ -12,7 +11,7 @@ function createAddHandler({
   first100Message,
 }) {
   return async function handleAdd(ctx, parsed) {
-    const { sum, max, values } = parsed;
+    const { sum, values } = parsed;
 
     await upsertUser(ctx.from);
     await addSharedChat(ctx.chat.id, ctx.from.id);
@@ -31,12 +30,6 @@ function createAddHandler({
       });
     }
     const total = await getTotalForUserDateV2(ctx.from.id, today);
-    await updateRecord({
-      chatId: ctx.chat.id,
-      userId: ctx.from.id,
-      count: max,
-      date: today,
-    });
 
     const name = ctx.from && ctx.from.username ? ctx.from.username : formatDisplayName(ctx.from);
     const header = formatAddHeader(name);

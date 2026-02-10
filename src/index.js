@@ -17,7 +17,6 @@ const {
   hasUserReached100,
   initDb,
   removeSharedChat,
-  updateRecord,
   upsertUser,
 } = require('./db');
 const { createAddHandler } = require('./handlers/add');
@@ -81,7 +80,6 @@ const handleAdd = createAddHandler({
   addSharedChat,
   addCount,
   getTotalForUserDateV2,
-  updateRecord,
   hasUserReached100,
   formatDisplayName,
   formatAddHeader,
