@@ -54,9 +54,11 @@ export async function fetchApproaches(auth, date, dateTo, userId) {
 export async function addPushups(auth, userId, delta) {
   requireAuth(auth)
   const client = createApiClient(auth)
+  const count = Number(delta)
   const { data } = await client.post('/add', {
     user_id: userId,
-    delta,
+    delta: count,
+    count,
   })
   return data
 }
