@@ -31,6 +31,17 @@ export async function fetchRecords(auth) {
   return data
 }
 
+export async function fetchRecordsPeriod(auth, period) {
+  requireAuth(auth)
+  const client = createApiClient(auth)
+  const params = { period }
+  if (auth.selectedChatId) {
+    params.chat_id = auth.selectedChatId
+  }
+  const { data } = await client.get('/records/period', { params })
+  return data
+}
+
 export async function fetchHistory(auth, userId) {
   requireAuth(auth)
   const client = createApiClient(auth)

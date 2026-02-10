@@ -644,21 +644,125 @@ async function getRecordsByChatV2(chatUserIds) {
         FROM daily_adds
         WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
         GROUP BY user_id
+      ),
+      overall_totals AS (
+        SELECT user_id, SUM(count) AS total_all
+        FROM daily_adds
+        WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+        GROUP BY user_id
       )
       SELECT
         bd.user_id,
         bd.best_day_date,
         bd.best_day_total,
         COALESCE(ba.best_approach, 0) AS best_approach,
+        COALESCE(ot.total_all, 0) AS total_all,
         u.username
       FROM best_day bd
       LEFT JOIN best_approach ba ON ba.user_id = bd.user_id
+      LEFT JOIN overall_totals ot ON ot.user_id = bd.user_id
       LEFT JOIN users u ON u.user_id = bd.user_id
       ORDER BY COALESCE(ba.best_approach, 0) DESC, bd.best_day_total DESC, bd.user_id ASC
     `,
     [chatUserIds]
   );
   return result.rows;
+}
+
+async function getRecordsByChatV2Period(chatUserIds, period) {
+  if (!chatUserIds.length) {
+    return [];
+  }
+
+  if (period === 'approach') {
+    const result = await pool.query(
+      `
+        WITH users_scope AS (
+          SELECT UNNEST($1::bigint[]) AS user_id
+        )
+        SELECT
+          us.user_id,
+          u.username,
+          MAX(da.count)::int AS value,
+          NULL::date AS period_start,
+          NULL::date AS period_end
+        FROM users_scope us
+        LEFT JOIN daily_adds da ON da.user_id = us.user_id AND da.migrated = FALSE
+        LEFT JOIN users u ON u.user_id = us.user_id
+        GROUP BY us.user_id, u.username
+        HAVING MAX(da.count) IS NOT NULL
+        ORDER BY value DESC, us.user_id ASC
+      `,
+      [chatUserIds]
+    );
+    return result.rows;
+  }
+
+  if (period === 'day') {
+    const result = await pool.query(
+      `
+        WITH users_scope AS (
+          SELECT UNNEST($1::bigint[]) AS user_id
+        ),
+        day_totals AS (
+          SELECT user_id, date, SUM(count) AS total
+          FROM daily_adds
+          WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+          GROUP BY user_id, date
+        ),
+        best_day AS (
+          SELECT DISTINCT ON (user_id)
+            user_id,
+            total::int AS value,
+            date AS period_start,
+            date AS period_end
+          FROM day_totals
+          ORDER BY user_id, total DESC, date DESC
+        )
+        SELECT us.user_id, u.username, bd.value, bd.period_start, bd.period_end
+        FROM users_scope us
+        LEFT JOIN best_day bd ON bd.user_id = us.user_id
+        LEFT JOIN users u ON u.user_id = us.user_id
+        WHERE bd.value IS NOT NULL
+        ORDER BY bd.value DESC, us.user_id ASC
+      `,
+      [chatUserIds]
+    );
+    return result.rows;
+  }
+
+  if (period === 'total') {
+    const result = await pool.query(
+      `
+        WITH users_scope AS (
+          SELECT UNNEST($1::bigint[]) AS user_id
+        ),
+        overall_totals AS (
+          SELECT
+            user_id,
+            SUM(count) AS total
+          FROM daily_adds
+          WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+          GROUP BY user_id
+        )
+        SELECT
+          us.user_id,
+          u.username,
+          ot.total::int AS value,
+          NULL::date AS period_start,
+          NULL::date AS period_end
+        FROM users_scope us
+        LEFT JOIN overall_totals ot ON ot.user_id = us.user_id
+        LEFT JOIN users u ON u.user_id = us.user_id
+        WHERE ot.total IS NOT NULL
+        ORDER BY ot.total DESC, us.user_id ASC
+      `,
+      [chatUserIds]
+    );
+    return result.rows;
+  }
+
+  throw new Error(`Unsupported records period: ${period}`);
 }
 
 async function getHistoryByUserIdV2(userId) {
@@ -712,6 +816,7 @@ module.exports = {
   getApproachesCountsByChatAndDate,
   getStatusByDateV2,
   getRecordsByChatV2,
+  getRecordsByChatV2Period,
   getHistoryByUserIdV2,
   getDisplayNameV2,
 };

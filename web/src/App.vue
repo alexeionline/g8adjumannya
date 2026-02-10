@@ -193,8 +193,10 @@ const leaderboard = computed(() =>
   (data.recordsRows || []).map((row, index) => ({
     key: row.user_id,
     label: row.username || row.first_name || row.user_id,
-    value: row.max_add,
-    date: formatDate(row.record_date),
+    bestApproach: Number(row.best_approach ?? row.max_add ?? 0),
+    bestDay: Number(row.best_day_total ?? 0),
+    bestDayDate: formatDate(row.best_day_date ?? row.record_date),
+    totalAll: Number(row.total_all ?? 0),
     rank: index + 1,
   }))
 )

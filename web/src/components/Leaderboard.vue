@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -7,41 +7,87 @@ const props = defineProps({
   items: { type: Array, default: () => [] },
 })
 
+const tabs = [
+  { id: 'approach', label: 'Подход', subtitle: 'Лучший разовый подход в этом чате', empty: 'Пока нет рекордов по подходу' },
+  { id: 'day', label: 'День', subtitle: 'Лучший дневной результат в этом чате', empty: 'Пока нет рекордов по дням' },
+  { id: 'total', label: 'Всего', subtitle: 'Больше всего повторений за всё время', empty: 'Пока нет суммарных рекордов' },
+]
+
+const activeTab = ref('approach')
 const showAll = ref(false)
 const TOP_LIMIT = 5
 
-const displayedItems = computed(() =>
-  showAll.value ? props.items || [] : (props.items || []).slice(0, TOP_LIMIT)
-)
+const activeMeta = computed(() => tabs.find((tab) => tab.id === activeTab.value) || tabs[0])
+
+const rankedItems = computed(() => {
+  const valuesByTab = {
+    approach: { valueKey: 'bestApproach', dateKey: '' },
+    day: { valueKey: 'bestDay', dateKey: 'bestDayDate' },
+    total: { valueKey: 'totalAll', dateKey: '' },
+  }
+
+  const keys = valuesByTab[activeTab.value] || valuesByTab.approach
+  return (props.items || [])
+    .map((item) => ({
+      key: item.key,
+      label: item.label,
+      value: Number(item[keys.valueKey] || 0),
+      date: keys.dateKey ? String(item[keys.dateKey] || '') : '',
+    }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value || String(a.label).localeCompare(String(b.label), 'ru'))
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    }))
+})
+
+const displayedItems = computed(() => (showAll.value ? rankedItems.value : rankedItems.value.slice(0, TOP_LIMIT)))
+
+watch(activeTab, () => {
+  showAll.value = false
+})
 </script>
 
 <template>
   <Card class="leader-card">
     <CardHeader class="leader-header">
       <CardTitle>Рекорды</CardTitle>
-      <p class="leader-sub">Лучший разовый подход в этом чате</p>
+      <p class="leader-sub">{{ activeMeta.subtitle }}</p>
+      <div class="leader-tabs" role="tablist" aria-label="Режим рекордов">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          class="leader-tab"
+          :class="{ 'leader-tab-active': activeTab === tab.id }"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
     </CardHeader>
     <CardContent>
-      <template v-if="items.length">
+      <template v-if="rankedItems.length">
         <ul class="leaderboard">
           <li v-for="item in displayedItems" :key="item.key" class="leader-item">
             <div class="leader-left">
               <span class="rank" :class="`rank-${Math.min(item.rank, 3)}`">{{ item.rank }}</span>
               <div>
                 <p class="name">{{ item.label }}</p>
-                <p class="date">{{ item.date }}</p>
+                <p v-if="item.date" class="date">{{ item.date }}</p>
               </div>
             </div>
             <div class="value">{{ item.value }}</div>
           </li>
         </ul>
-        <div v-if="items.length > TOP_LIMIT" class="show-more-wrap">
+        <div v-if="rankedItems.length > TOP_LIMIT" class="show-more-wrap">
           <Button type="button" size="sm" class="show-more-btn" @click="showAll = !showAll">
             {{ showAll ? 'Свернуть' : 'Показать всех' }}
           </Button>
         </div>
       </template>
-      <div v-else class="leader-empty">Пока нет рекордов</div>
+      <div v-else class="leader-empty">{{ activeMeta.empty }}</div>
     </CardContent>
   </Card>
 </template>
@@ -60,6 +106,34 @@ const displayedItems = computed(() =>
   margin: 0.25rem 0 0;
   font-size: 0.8rem;
   color: var(--muted-foreground);
+}
+
+.leader-tabs {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.leader-tab {
+  border: 1px solid rgba(16, 49, 87, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--foreground-strong);
+  padding: 0.2rem 0.62rem;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.leader-tab:hover {
+  transform: translateY(-1px);
+}
+
+.leader-tab-active {
+  border-color: rgba(14, 165, 233, 0.52);
+  background: linear-gradient(145deg, rgba(234, 247, 255, 0.98), rgba(215, 238, 255, 0.92));
 }
 
 .leaderboard {

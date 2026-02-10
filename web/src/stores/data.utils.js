@@ -82,8 +82,12 @@ export function normalizeRecordsRows(rows) {
       last_name: row.last_name ?? null,
       max_add: Number(row.max_add ?? row.best_approach ?? 0),
       record_date: row.record_date ?? row.best_day_date ?? null,
+      best_approach: Number(row.best_approach ?? row.max_add ?? 0),
+      best_day_total: Number(row.best_day_total ?? row.record_count ?? 0),
+      best_day_date: row.best_day_date ?? row.record_date ?? null,
+      total_all: Number(row.total_all ?? row.total ?? 0),
     }))
-    .sort((a, b) => Number(b.max_add || 0) - Number(a.max_add || 0))
+    .sort((a, b) => Number(b.best_approach || 0) - Number(a.best_approach || 0))
 }
 
 export function computeStreaks(days, target, anchorDateKey) {

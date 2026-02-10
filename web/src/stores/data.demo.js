@@ -1,4 +1,4 @@
-import { formatDateKey } from './data.utils'
+import { formatDateKey } from './data.utils.js'
 
 export const DEMO_USERS = [
   { user_id: 1001, username: 'alex', first_name: 'Alex', last_name: null },
@@ -213,17 +213,27 @@ function buildEveningStatusRows() {
 }
 
 export function buildRecordsFromStatus(statusRows) {
-  const todayKey = formatDateKey(new Date())
+  const now = new Date()
+  const todayKey = formatDateKey(now)
   return statusRows
-    .map((row) => ({
-      user_id: row.user_id,
-      username: row.username,
-      first_name: row.first_name,
-      last_name: row.last_name,
-      max_add: Math.max(...(row.approaches || []).map((entry) => Number(entry.count || 0)), 0),
-      record_date: todayKey,
-    }))
-    .sort((a, b) => b.max_add - a.max_add)
+    .map((row, index) => {
+      const bestApproach = Math.max(...(row.approaches || []).map((entry) => Number(entry.count || 0)), 0)
+      const bestDay = Number(row.count || 0)
+      const bonus = (index + 1) * 3
+      return {
+        user_id: row.user_id,
+        username: row.username,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        max_add: bestApproach,
+        record_date: todayKey,
+        best_approach: bestApproach,
+        best_day_total: bestDay,
+        best_day_date: todayKey,
+        total_all: bestDay * 18 + bestApproach * 4 + bonus * 10,
+      }
+    })
+    .sort((a, b) => b.best_approach - a.best_approach)
 }
 
 export function buildDemoByChat() {

@@ -20,6 +20,7 @@ const {
   getDisplayNameV2,
   getHistoryByUserIdV2,
   getRecordsByChatV2,
+  getRecordsByChatV2Period,
   getStatusByDateV2,
   getTotalForUserDateV2,
   initDb,
@@ -589,8 +590,36 @@ function createApiApp() {
       best_approach: r.best_approach,
       best_day_total: r.best_day_total,
       best_day_date: r.best_day_date,
+      total_all: Number(r.total_all || 0),
     }));
     return res.json({ rows: withDisplay });
+  }));
+
+  v2.get('/records/period', authV2Middleware, asyncRoute(async (req, res) => {
+    const parsedChatId = parseRequiredChatId(req.query.chat_id);
+    if (parsedChatId.error) {
+      return res.status(400).json({ error: parsedChatId.error });
+    }
+    const period = String(req.query.period || '').trim().toLowerCase();
+    if (!['approach', 'day', 'total'].includes(period)) {
+      return res.status(400).json({ error: 'period must be one of: approach, day, total' });
+    }
+
+    const chatIdNum = parsedChatId.value;
+    const inChat = await isUserSharedInChat(chatIdNum, req.userId);
+    if (!inChat) {
+      return res.status(403).json({ error: 'no access to this chat' });
+    }
+    const chatUserIds = await getSharedUserIdsByChat(chatIdNum);
+    const rows = await getRecordsByChatV2Period(chatUserIds, period);
+    const withDisplay = rows.map((r) => ({
+      user_id: r.user_id,
+      display_name: getDisplayNameV2(r),
+      value: Number(r.value || 0),
+      period_start: r.period_start,
+      period_end: r.period_end,
+    }));
+    return res.json({ period, rows: withDisplay });
   }));
 
   v2.get('/chats', authV2Middleware, asyncRoute(async (req, res) => {

@@ -17,6 +17,7 @@ function buildDbMock(overrides = {}) {
     getDisplayNameV2: (row) => row.username || `User ${row.user_id}`,
     getHistoryByUserIdV2: async () => [],
     getRecordsByChatV2: async () => [],
+    getRecordsByChatV2Period: async () => [],
     getStatusByDateV2: async () => [],
     getTotalForUserDateV2: async () => 0,
     initDb: async () => {},
@@ -625,7 +626,7 @@ test('v2 /records validates chat and returns display mapping', async () => {
   const dbMock = buildDbMock({
     isUserSharedInChat: async (chatId) => chatId === -1001,
     getSharedUserIdsByChat: async () => [7],
-    getRecordsByChatV2: async () => [{ user_id: 7, username: 'neo', best_approach: 55, best_day_total: 180, best_day_date: '2026-02-01' }],
+    getRecordsByChatV2: async () => [{ user_id: 7, username: 'neo', best_approach: 55, best_day_total: 180, best_day_date: '2026-02-01', total_all: 3210 }],
     getDisplayNameV2: () => 'Neo',
   });
 
@@ -653,7 +654,84 @@ test('v2 /records validates chat and returns display mapping', async () => {
       query: { chat_id: '-1001' },
     });
     assert.equal(ok.statusCode, 200);
-    assert.equal(ok.payload.rows[0].display_name, 'Neo');
+    assert.deepEqual(ok.payload.rows[0], {
+      user_id: 7,
+      display_name: 'Neo',
+      best_approach: 55,
+      best_day_total: 180,
+      best_day_date: '2026-02-01',
+      total_all: 3210,
+    });
+  } finally {
+    restore();
+  }
+});
+
+test('v2 /records/period validates period and returns selected leaderboard', async () => {
+  const env = { JWT_SECRET: 's1', BOT_TOKEN: 'bot-token' };
+  const token = makeV2Token(7, env.JWT_SECRET);
+  let captured = null;
+  const dbMock = buildDbMock({
+    isUserSharedInChat: async (chatId) => chatId === -1001,
+    getSharedUserIdsByChat: async () => [7, 8],
+    getRecordsByChatV2Period: async (chatUserIds, period) => {
+      captured = { chatUserIds, period };
+      return [
+        { user_id: 7, username: 'neo', value: 420, period_start: null, period_end: null },
+      ];
+    },
+    getDisplayNameV2: () => 'Neo',
+  });
+
+  const { app, restore } = loadApiAppWithDbMock(dbMock, env);
+  try {
+    const badPeriod = await invokeRoute(app, {
+      method: 'get',
+      path: '/api/v2/records/period',
+      headers: { authorization: `Bearer ${token}` },
+      query: { chat_id: '-1001', period: 'year' },
+    });
+    assert.equal(badPeriod.statusCode, 400);
+
+    for (const allowed of ['approach', 'day', 'total']) {
+      const allowedRes = await invokeRoute(app, {
+        method: 'get',
+        path: '/api/v2/records/period',
+        headers: { authorization: `Bearer ${token}` },
+        query: { chat_id: '-1001', period: allowed },
+      });
+      assert.equal(allowedRes.statusCode, 200);
+      assert.equal(allowedRes.payload.period, allowed);
+    }
+
+    const denied = await invokeRoute(app, {
+      method: 'get',
+      path: '/api/v2/records/period',
+      headers: { authorization: `Bearer ${token}` },
+      query: { chat_id: '-1002', period: 'total' },
+    });
+    assert.equal(denied.statusCode, 403);
+
+    const ok = await invokeRoute(app, {
+      method: 'get',
+      path: '/api/v2/records/period',
+      headers: { authorization: `Bearer ${token}` },
+      query: { chat_id: '-1001', period: 'total' },
+    });
+    assert.equal(ok.statusCode, 200);
+    assert.deepEqual(captured, { chatUserIds: [7, 8], period: 'total' });
+    assert.deepEqual(ok.payload, {
+      period: 'total',
+      rows: [
+        {
+          user_id: 7,
+          display_name: 'Neo',
+          value: 420,
+          period_start: null,
+          period_end: null,
+        },
+      ],
+    });
   } finally {
     restore();
   }
