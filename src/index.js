@@ -21,7 +21,6 @@ const {
   upsertUser,
 } = require('./db');
 const { createAddHandler } = require('./handlers/add');
-const { createApiTokenHandler } = require('./handlers/apiToken');
 const { createRecordHandler } = require('./handlers/record');
 const { createForceHandler } = require('./handlers/force');
 const { createShareHandler } = require('./handlers/share');
@@ -122,16 +121,10 @@ const handleHide = createHideHandler({
   removeSharedChat,
   sendEphemeral,
 });
-const handleApiToken = createApiTokenHandler({
-  createApiToken,
-  getApiTokenByChat,
-  sendEphemeral,
-});
 
 bot.start((ctx) => {
   if (!(ctx.message?.text || '').trim().startsWith('/start')) return;
-  sendEphemeral(ctx, COMMANDS_TEXT);
-  handleApiToken(ctx);
+  return sendEphemeral(ctx, COMMANDS_TEXT);
 });
 
 bot.use(

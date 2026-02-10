@@ -1,25 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createApiTokenHandler } = require('../src/handlers/apiToken');
 const { createShareHandler } = require('../src/handlers/share');
 const { createHideHandler } = require('../src/handlers/hide');
-
-test('apiToken handler returns existing token without creating new one', async () => {
-  const calls = [];
-  const handler = createApiTokenHandler({
-    createApiToken: async () => {
-      throw new Error('should not create');
-    },
-    getApiTokenByChat: async () => 'abc',
-    sendEphemeral: async (...args) => {
-      calls.push(args);
-      return {};
-    },
-  });
-  await handler({ chat: { id: 1 } });
-  assert.equal(calls[0][1], 'API token: abc');
-});
 
 test('share handler links chat and sends confirmation', async () => {
   const calls = [];

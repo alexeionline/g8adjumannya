@@ -28,7 +28,13 @@ test('formatProgressBar fills 1 block per 20 reps up to 5 blocks', () => {
 });
 
 test('formatAddHeader injects username into phrase', () => {
-  const text = formatAddHeader('alex');
-  assert.equal(typeof text, 'string');
-  assert.ok(text.includes('alex') || text === 'Все это видят?');
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const text = formatAddHeader('alex');
+    assert.equal(typeof text, 'string');
+    assert.ok(text.includes('alex'));
+  } finally {
+    Math.random = originalRandom;
+  }
 });
