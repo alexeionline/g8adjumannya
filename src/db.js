@@ -631,7 +631,7 @@ async function getRecordsByChatV2(chatUserIds) {
       WITH day_totals AS (
         SELECT user_id, date, SUM(count) AS day_total
         FROM daily_adds
-        WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+        WHERE user_id = ANY($1::bigint[])
         GROUP BY user_id, date
       ),
       best_day AS (
@@ -651,7 +651,7 @@ async function getRecordsByChatV2(chatUserIds) {
       overall_totals AS (
         SELECT user_id, SUM(count) AS total_all
         FROM daily_adds
-        WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+        WHERE user_id = ANY($1::bigint[])
         GROUP BY user_id
       )
       SELECT
@@ -715,7 +715,7 @@ async function getRecordsByChatV2Period(chatUserIds, period) {
         day_totals AS (
           SELECT user_id, date, SUM(count) AS total
           FROM daily_adds
-          WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+          WHERE user_id = ANY($1::bigint[])
           GROUP BY user_id, date
         ),
         best_day AS (
@@ -750,7 +750,7 @@ async function getRecordsByChatV2Period(chatUserIds, period) {
             user_id,
             SUM(count) AS total
           FROM daily_adds
-          WHERE user_id = ANY($1::bigint[]) AND migrated = FALSE
+          WHERE user_id = ANY($1::bigint[])
           GROUP BY user_id
         )
         SELECT
