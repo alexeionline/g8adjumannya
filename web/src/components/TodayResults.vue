@@ -18,6 +18,7 @@ import TodayProgress from './TodayProgress.vue'
 const props = defineProps({
   items: { type: Array, default: () => [] },
   goal: { type: Number, default: 100 },
+  editableUserId: { type: [String, Number], default: '' },
   onRefresh: { type: Function, default: null },
   onUpdateApproach: { type: Function, default: null },
   onDeleteApproach: { type: Function, default: null },
@@ -43,7 +44,7 @@ function isEditing(itemKey, index) {
 }
 
 function startEdit(itemKey, index, approach) {
-  if (approach.id == null) return
+  if (!canEditApproach(itemKey, approach)) return
   editing.value = { itemKey, index, id: approach.id, count: approach.count }
   editInput.value = String(approach.count)
 }
@@ -82,6 +83,13 @@ function approachCount(approach) {
 
 function approachId(approach) {
   return typeof approach === 'object' && approach != null && 'id' in approach ? approach.id : null
+}
+
+function canEditApproach(itemKey, approach) {
+  const owner = String(itemKey ?? '')
+  const currentUser = String(props.editableUserId ?? '')
+  const id = approachId(approach)
+  return Boolean(currentUser) && owner === currentUser && id != null
 }
 
 function formatElapsed(createdAtPrev, createdAtCur) {
@@ -157,8 +165,8 @@ function elapsedTitle(prev, cur) {
                     v-else
                     type="button"
                     class="approach-pill"
-                    :class="{ 'approach-pill-passive': approachId(approach) == null }"
-                    :title="approachId(approach) != null ? 'Редактировать подход' : String(approachCount(approach))"
+                    :class="{ 'approach-pill-passive': !canEditApproach(item.key, approach) }"
+                    :title="canEditApproach(item.key, approach) ? 'Редактировать подход' : String(approachCount(approach))"
                     @click="startEdit(item.key, i, { id: approachId(approach), count: approachCount(approach) })"
                   >
                     {{ approachCount(approach) }}

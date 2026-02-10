@@ -19,6 +19,13 @@ const monthCursor = ref(new Date())
 const historyUserId = ref('')
 const addCountInput = ref('')
 
+function getLocalDateKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`
+}
+
 onMounted(async () => {
   if (isDemo) {
     historyUserId.value = String(data.demoUserId || '')
@@ -77,10 +84,7 @@ onMounted(async () => {
   }
 })
 
-const todayDateKey = computed(() => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-})
+const todayDateKey = computed(() => data.currentDateKey || getLocalDateKey())
 
 const selectedChatLabel = computed(() => {
   const hit = data.chats.find((chat) => chat.id === data.selectedChatId)
@@ -140,16 +144,31 @@ const myBestApproach = computed(() => {
   return Math.max(Number(bestFromRecords || 0), Number(bestFromTodayApproaches || 0))
 })
 
+const editableUserId = computed(() => {
+  if (isDemo) {
+    return String(historyUserId.value || data.demoUserId || '')
+  }
+  return String(auth.defaultUserId || historyUserId.value || '')
+})
+
 async function refreshToday() {
-  await data.loadStatus(auth, todayDateKey.value)
+  await data.loadStatus(auth, data.currentDateKey || undefined)
 }
 
 async function handleUpdateApproach(approachId, userId, count) {
-  await data.updateApproach(auth, approachId, userId, count, todayDateKey.value)
+  if (String(userId ?? '') !== editableUserId.value) {
+    data.error = 'Можно редактировать только свои подходы'
+    return
+  }
+  await data.updateApproach(auth, approachId, userId, count, data.currentDateKey || undefined)
 }
 
 async function handleDeleteApproach(approachId, userId) {
-  await data.deleteApproach(auth, approachId, userId, todayDateKey.value)
+  if (String(userId ?? '') !== editableUserId.value) {
+    data.error = 'Можно удалять только свои подходы'
+    return
+  }
+  await data.deleteApproach(auth, approachId, userId, data.currentDateKey || undefined)
 }
 
 const leaderboard = computed(() =>
@@ -344,6 +363,7 @@ async function onChangeChat(event) {
       <TodayResults
         :items="todayResults"
         :goal="data.targetPerDay"
+        :editable-user-id="editableUserId"
         :on-refresh="refreshToday"
         :on-update-approach="handleUpdateApproach"
         :on-delete-approach="handleDeleteApproach"

@@ -14,23 +14,27 @@ const props = defineProps({
 })
 
 function getLongestStreak(daysMap, predicate) {
-  const validDates = Object.keys(daysMap || {})
+  const validOrdinals = Object.keys(daysMap || {})
     .filter((dateKey) => predicate(Number(daysMap[dateKey] || 0)))
-    .sort()
+    .map((dateKey) => {
+      const match = String(dateKey).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      if (!match) return null
+      const year = Number(match[1])
+      const month = Number(match[2])
+      const day = Number(match[3])
+      if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null
+      return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000)
+    })
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b)
 
-  if (validDates.length === 0) return 0
+  if (validOrdinals.length === 0) return 0
 
   let best = 1
   let current = 1
 
-  for (let i = 1; i < validDates.length; i += 1) {
-    const prev = new Date(`${validDates[i - 1]}T00:00:00`)
-    const cur = new Date(`${validDates[i]}T00:00:00`)
-    if (Number.isNaN(prev.getTime()) || Number.isNaN(cur.getTime())) {
-      current = 1
-      continue
-    }
-    const diffDays = Math.round((cur.getTime() - prev.getTime()) / 86_400_000)
+  for (let i = 1; i < validOrdinals.length; i += 1) {
+    const diffDays = validOrdinals[i] - validOrdinals[i - 1]
     if (diffDays === 1) {
       current += 1
       if (current > best) best = current

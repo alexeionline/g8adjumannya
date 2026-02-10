@@ -30,7 +30,21 @@ const DEMO_CHATS = [
 ]
 
 function formatDateKey(date) {
-  return date.toISOString().slice(0, 10)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate()
+  ).padStart(2, '0')}`
+}
+
+function dateKeyToOrdinal(dateKey) {
+  if (typeof dateKey !== 'string') return null
+  const match = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000)
 }
 
 function deepClone(value) {
@@ -98,13 +112,15 @@ function normalizeRecordsRows(rows) {
     .sort((a, b) => Number(b.max_add || 0) - Number(a.max_add || 0))
 }
 
-function computeStreaks(days, target) {
+function computeStreaks(days, target, anchorDateKey) {
   const threshold = clampTarget(target)
-  const streakableDates = Object.keys(days || {})
+  const streakableOrdinals = Object.keys(days || {})
     .filter((dateKey) => Number(days[dateKey] || 0) >= threshold)
-    .sort()
+    .map((dateKey) => dateKeyToOrdinal(dateKey))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b)
 
-  if (streakableDates.length === 0) {
+  if (streakableOrdinals.length === 0) {
     return { currentStreak: 0, bestStreak: 0 }
   }
 
@@ -112,16 +128,11 @@ function computeStreaks(days, target) {
   let run = 0
   let previous = null
 
-  for (const dateKey of streakableDates) {
-    const current = new Date(`${dateKey}T00:00:00`)
-    if (Number.isNaN(current.getTime())) {
-      continue
-    }
-
+  for (const current of streakableOrdinals) {
     if (!previous) {
       run = 1
     } else {
-      const diff = Math.round((current.getTime() - previous.getTime()) / 86_400_000)
+      const diff = current - previous
       run = diff === 1 ? run + 1 : 1
     }
 
@@ -129,18 +140,17 @@ function computeStreaks(days, target) {
     previous = current
   }
 
-  let currentStreak = 0
-  const cursor = new Date()
-  cursor.setHours(0, 0, 0, 0)
+  const streakSet = new Set(streakableOrdinals)
+  const fallbackOrdinal = dateKeyToOrdinal(formatDateKey(new Date()))
+  let cursor = dateKeyToOrdinal(anchorDateKey)
+  if (!Number.isFinite(cursor)) {
+    cursor = fallbackOrdinal
+  }
 
-  while (true) {
-    const key = formatDateKey(cursor)
-    if (Number(days?.[key] || 0) >= threshold) {
-      currentStreak += 1
-      cursor.setDate(cursor.getDate() - 1)
-      continue
-    }
-    break
+  let currentStreak = 0
+  while (Number.isFinite(cursor) && streakSet.has(cursor)) {
+    currentStreak += 1
+    cursor -= 1
   }
 
   return {
@@ -391,6 +401,7 @@ export const useDataStore = defineStore('data', {
     targetPerDay: 100,
     currentStreak: 0,
     bestStreak: 0,
+    currentDateKey: '',
     demoByChat: {},
   }),
   actions: {
@@ -411,7 +422,7 @@ export const useDataStore = defineStore('data', {
       this.recalculateStreaks()
     },
     recalculateStreaks() {
-      const result = computeStreaks(this.historyDays, this.targetPerDay)
+      const result = computeStreaks(this.historyDays, this.targetPerDay, this.currentDateKey)
       this.currentStreak = result.currentStreak
       this.bestStreak = result.bestStreak
     },
@@ -427,12 +438,14 @@ export const useDataStore = defineStore('data', {
         this.statusRows = []
         this.recordsRows = []
         this.historyDays = {}
+        this.currentDateKey = formatDateKey(new Date())
         this.recalculateStreaks()
         return
       }
       this.statusRows = deepClone(pack.statusRows).sort((a, b) => Number(b.count || 0) - Number(a.count || 0))
       this.recordsRows = deepClone(pack.recordsRows).sort((a, b) => Number(b.max_add || 0) - Number(a.max_add || 0))
       this.historyDays = { ...pack.historyDays }
+      this.currentDateKey = formatDateKey(new Date())
       this.recalculateStreaks()
     },
     ensureDemoData() {
@@ -503,6 +516,10 @@ export const useDataStore = defineStore('data', {
         auth.selectedChatId = this.selectedChatId || auth.selectedChatId || ''
         const data = await fetchStatus(auth, date)
         this.statusRows = normalizeStatusRows(data.rows)
+        if (typeof data?.date === 'string' && data.date) {
+          this.currentDateKey = data.date
+        }
+        this.recalculateStreaks()
       } catch (error) {
         this.error = extractErrorMessage(error)
       } finally {
