@@ -40,6 +40,16 @@ export async function fetchHistory(auth, userId) {
   return data
 }
 
+export async function fetchApproaches(auth, date, dateTo) {
+  requireAuth(auth)
+  const client = createApiClient(auth)
+  const params = {}
+  if (date) params.date = date
+  if (dateTo) params.date_to = dateTo
+  const { data } = await client.get('/approaches', { params })
+  return data
+}
+
 export async function addPushups(auth, userId, delta) {
   requireAuth(auth)
   const client = createApiClient(auth)

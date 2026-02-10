@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import {
   addPushups,
   deleteApproach as apiDeleteApproach,
+  fetchApproaches,
   fetchChats,
   fetchHistory,
   fetchRecords,
@@ -387,6 +388,16 @@ function buildDemoByChat() {
   }
 }
 
+function buildApproachesDaysFromHistory(days) {
+  return Object.keys(days || {}).reduce((acc, dateKey) => {
+    const total = Number(days[dateKey] || 0)
+    if (total > 0) {
+      acc[dateKey] = Math.max(1, Math.round(total / 20))
+    }
+    return acc
+  }, {})
+}
+
 export const useDataStore = defineStore('data', {
   state: () => ({
     loading: false,
@@ -394,6 +405,7 @@ export const useDataStore = defineStore('data', {
     statusRows: [],
     recordsRows: [],
     historyDays: {},
+    historyApproachesDays: {},
     demoReady: false,
     demoUserId: DEMO_USERS[0].user_id,
     chats: [],
@@ -438,6 +450,7 @@ export const useDataStore = defineStore('data', {
         this.statusRows = []
         this.recordsRows = []
         this.historyDays = {}
+        this.historyApproachesDays = {}
         this.currentDateKey = formatDateKey(new Date())
         this.recalculateStreaks()
         return
@@ -446,6 +459,11 @@ export const useDataStore = defineStore('data', {
       this.recordsRows = deepClone(pack.recordsRows).sort((a, b) => Number(b.max_add || 0) - Number(a.max_add || 0))
       this.historyDays = { ...pack.historyDays }
       this.currentDateKey = formatDateKey(new Date())
+      this.historyApproachesDays = buildApproachesDaysFromHistory(pack.historyDays)
+      const myRow = pack.statusRows.find((row) => Number(row.user_id) === Number(this.demoUserId))
+      if (myRow) {
+        this.historyApproachesDays[this.currentDateKey] = Array.isArray(myRow.approaches) ? myRow.approaches.length : 0
+      }
       this.recalculateStreaks()
     },
     ensureDemoData() {
@@ -463,7 +481,12 @@ export const useDataStore = defineStore('data', {
     async loadAll(auth, userId) {
       this.initializeFromStorage()
       await this.loadChats(auth)
-      await Promise.all([this.loadStatus(auth), this.loadRecords(auth), this.loadHistory(auth, userId)])
+      await Promise.all([
+        this.loadStatus(auth),
+        this.loadRecords(auth),
+        this.loadHistory(auth, userId),
+        this.loadHistoryApproaches(auth, userId),
+      ])
     },
     async loadChats(auth) {
       try {
@@ -547,6 +570,7 @@ export const useDataStore = defineStore('data', {
     async loadHistory(auth, userId) {
       if (!userId) {
         this.historyDays = {}
+        this.historyApproachesDays = {}
         this.recalculateStreaks()
         return
       }
@@ -565,6 +589,38 @@ export const useDataStore = defineStore('data', {
         this.error = extractErrorMessage(error)
       } finally {
         this.loading = false
+      }
+    },
+    async loadHistoryApproaches(auth, userId) {
+      if (!userId) {
+        this.historyApproachesDays = {}
+        return
+      }
+      if (DEMO_MODE) {
+        this.ensureDemoData()
+        this.syncFromDemoPack()
+        return
+      }
+      if (String(userId) !== String(auth?.defaultUserId || '')) {
+        this.historyApproachesDays = {}
+        return
+      }
+      try {
+        const end = this.currentDateKey || formatDateKey(new Date())
+        const startDate = new Date()
+        startDate.setDate(startDate.getDate() - 365)
+        const start = formatDateKey(startDate)
+        const rows = await fetchApproaches(auth, start, end)
+        const map = {}
+        ;(rows || []).forEach((entry) => {
+          const key = String(entry?.date || '')
+          if (!key) return
+          map[key] = Number(map[key] || 0) + 1
+        })
+        this.historyApproachesDays = map
+      } catch {
+        // v1 API may not have /approaches; keep map empty without surfacing an error.
+        this.historyApproachesDays = {}
       }
     },
     async addCount(auth, userId, delta) {
@@ -619,6 +675,7 @@ export const useDataStore = defineStore('data', {
           this.loadStatus(auth),
           this.loadRecords(auth),
           this.loadHistory(auth, userId),
+          this.loadHistoryApproaches(auth, userId),
         ])
       } catch (error) {
         this.error = extractErrorMessage(error)
@@ -646,7 +703,12 @@ export const useDataStore = defineStore('data', {
         }
         await apiUpdateApproach(auth, approachId, userId, count)
         await this.loadStatus(auth, date)
-        if (userId) await this.loadHistory(auth, userId)
+        if (userId) {
+          await Promise.all([
+            this.loadHistory(auth, userId),
+            this.loadHistoryApproaches(auth, userId),
+          ])
+        }
       } catch (error) {
         this.error = extractErrorMessage(error)
       }
@@ -668,7 +730,12 @@ export const useDataStore = defineStore('data', {
         }
         await apiDeleteApproach(auth, approachId, userId)
         await this.loadStatus(auth, date)
-        if (userId) await this.loadHistory(auth, userId)
+        if (userId) {
+          await Promise.all([
+            this.loadHistory(auth, userId),
+            this.loadHistoryApproaches(auth, userId),
+          ])
+        }
       } catch (error) {
         this.error = extractErrorMessage(error)
       }

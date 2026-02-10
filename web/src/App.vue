@@ -220,8 +220,9 @@ const calendarDays = computed(() => {
   for (let day = 1; day <= daysInMonth; day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const count = Number(data.historyDays?.[dateKey] || 0)
+    const approachesCount = Number(data.historyApproachesDays?.[dateKey] || 0)
     const tone = count >= 100 ? 'high' : count > 0 ? 'mid' : 'empty'
-    result.push({ key: dateKey, value: day, tone, count })
+    result.push({ key: dateKey, value: day, tone, count, approachesCount })
   }
 
   return result
