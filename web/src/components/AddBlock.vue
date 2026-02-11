@@ -14,47 +14,66 @@ const emit = defineEmits(['update:userInput'])
 
 const quickAdds = [5, 10, 15, 20, 25, 30]
 const actionsLocked = ref(false)
+const overlayVisible = ref(false)
 const overlayText = ref('')
-let lockTimer = null
+let hideTimer = null
 
-function lockActionsFor3Sec(text = '') {
-  overlayText.value = text
+function showOverlay() {
+  overlayVisible.value = true
+  overlayText.value = ''
   actionsLocked.value = true
-  if (lockTimer) clearTimeout(lockTimer)
-  lockTimer = setTimeout(() => {
-    actionsLocked.value = false
-    overlayText.value = ''
+}
+
+function hideOverlay() {
+  overlayVisible.value = false
+  overlayText.value = ''
+  actionsLocked.value = false
+}
+
+function resolveOverlayWithDelay(text) {
+  overlayText.value = text
+  if (hideTimer) clearTimeout(hideTimer)
+  hideTimer = setTimeout(() => {
+    hideOverlay()
+    hideTimer = null
   }, 3_000)
+}
+
+async function runAddAction(action, value) {
+  showOverlay()
+  const ok = await action()
+  if (ok) {
+    resolveOverlayWithDelay(`Добавлен подход: ${value}!\nОтличная работа!`)
+    return
+  }
+  resolveOverlayWithDelay('Не удалось добавить подход')
 }
 
 async function handleSubmitClick() {
   if (actionsLocked.value) return
   const value = Number(props.userInput)
-  lockActionsFor3Sec()
-  const ok = await props.onSubmit()
-  if (ok) {
-    lockActionsFor3Sec(`Добавлен подход: ${value}!\nОтличная работа!`)
-  }
+  await runAddAction(props.onSubmit, value)
 }
 
 async function handleQuickAddClick(value) {
   if (actionsLocked.value || !props.onQuickAdd) return
-  lockActionsFor3Sec()
-  const ok = await props.onQuickAdd(value)
-  if (ok) {
-    lockActionsFor3Sec(`Добавлен подход: ${value}!\nОтличная работа!`)
-  }
+  await runAddAction(() => props.onQuickAdd(value), value)
 }
 
 onBeforeUnmount(() => {
-  if (lockTimer) clearTimeout(lockTimer)
+  if (hideTimer) clearTimeout(hideTimer)
+  if (overlayVisible.value) {
+    overlayVisible.value = false
+    overlayText.value = ''
+    actionsLocked.value = false
+  }
 })
 </script>
 
 <template>
   <Card class="add-block-card">
     <transition name="overlay-fade">
-      <div v-if="actionsLocked && overlayText" class="add-overlay" role="status" aria-live="polite">
+      <div v-if="overlayVisible" class="add-overlay" role="status" aria-live="polite">
         <span class="add-overlay-text">{{ overlayText }}</span>
       </div>
     </transition>
