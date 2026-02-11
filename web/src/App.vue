@@ -122,11 +122,29 @@ const todayResults = computed(() =>
   })
 )
 
+const activeTodayCount = computed(() =>
+  todayResults.value.filter((item) => Number(item.value || 0) > 0).length
+)
+
+const myTodayTotal = computed(() => {
+  const me = String(historyUserId.value || auth.defaultUserId || '')
+  if (!me) return 0
+  const row = todayResults.value.find((item) => String(item.key) === me)
+  return Number(row?.value || 0)
+})
+
 const myRank = computed(() => {
   const me = String(historyUserId.value || auth.defaultUserId || '')
   if (!me) return null
-  const index = todayResults.value.findIndex((item) => String(item.key) === me)
+  const rankedToday = todayResults.value.filter((item) => Number(item.value || 0) > 0)
+  const index = rankedToday.findIndex((item) => String(item.key) === me)
   return index >= 0 ? index + 1 : null
+})
+
+const myTodayRankLabel = computed(() => {
+  if (myTodayTotal.value <= 0) return '-'
+  if (!myRank.value) return '-'
+  return `#${myRank.value} / ${activeTodayCount.value}`
 })
 
 const myBestRank = computed(() => {
@@ -159,6 +177,12 @@ const myTodayApproaches = computed(() => {
 const todayApproachesCount = computed(() => myTodayApproaches.value.length)
 const todayBestApproach = computed(() => (myTodayApproaches.value.length ? Math.max(...myTodayApproaches.value) : 0))
 const todayWorstApproach = computed(() => (myTodayApproaches.value.length ? Math.min(...myTodayApproaches.value) : 0))
+const chatTodayTotal = computed(() =>
+  todayResults.value.reduce((sum, item) => sum + Number(item.value || 0), 0)
+)
+const chatTodayApproachesCount = computed(() =>
+  todayResults.value.reduce((sum, item) => sum + (Array.isArray(item.approaches) ? item.approaches.length : 0), 0)
+)
 const badgeMetrics = computed(() => buildBadgesMetrics(data.historyDays, myBestApproach.value))
 const allBadges = computed(() => buildChallengeBadges(badgeMetrics.value))
 const unlockedBadges = computed(() => allBadges.value.filter((item) => item.achieved).length)
@@ -521,8 +545,10 @@ async function onChangeChat(event) {
           </div>
         </CardHeader>
         <CardContent class="chat-context-metrics">
-          <BlockActionButton label="Моё место сегодня" :value="myRank ? `#${myRank}` : '—'" @click="scrollToTodayResults" />
+          <BlockActionButton label="Моё место сегодня" :value="myTodayRankLabel" @click="scrollToTodayResults" />
           <BlockActionButton label="Моё место в рекордах" :value="myBestRank ? `#${myBestRank}` : '—'" @click="scrollToLeaderboard" />
+          <BlockActionButton label="Общее кол-во за сегодня" :value="String(chatTodayTotal)" :interactive="false" />
+          <BlockActionButton label="Подходов сегодня" :value="String(chatTodayApproachesCount)" :interactive="false" />
         </CardContent>
       </Card>
 
