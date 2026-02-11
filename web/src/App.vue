@@ -139,7 +139,7 @@ const myBestApproach = computed(() => {
   const me = String(historyUserId.value || auth.defaultUserId || '')
   if (!me) return 0
 
-  const bestFromRecords = leaderboard.value.find((item) => String(item.key) === me)?.value ?? 0
+  const bestFromRecords = leaderboard.value.find((item) => String(item.key) === me)?.bestApproach ?? 0
   const myTodayRow = todayResults.value.find((item) => String(item.key) === me)
   const bestFromTodayApproaches = Math.max(
     0,
