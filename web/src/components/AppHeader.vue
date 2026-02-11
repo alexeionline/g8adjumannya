@@ -9,8 +9,6 @@
 <style scoped>
 .app-header {
   position: relative;
-  margin-left: calc(var(--edge-gutter, 0.85rem) * -1);
-  margin-right: calc(var(--edge-gutter, 0.85rem) * -1);
   margin-bottom: -0.35rem;
   z-index: 0;
 }
@@ -18,7 +16,6 @@
 .hero-image {
   position: relative;
   min-height: 14.2rem;
-  border-radius: 0 0 1.4rem 1.4rem;
   overflow: hidden;
   background-image: url('/background.png');
   background-size: cover;
