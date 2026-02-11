@@ -97,7 +97,7 @@ body {
 
 #app {
   min-height: 100vh;
-  padding: 1rem 0.85rem 1.25rem;
+  padding: 0;
 }
 
 input,

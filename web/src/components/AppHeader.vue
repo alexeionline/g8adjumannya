@@ -7,14 +7,18 @@ defineProps({
 
 <template>
   <header class="app-header">
-    <div class="brand-mark" aria-hidden="true">
-      <img src="/logo.png" alt="" class="brand-mark-image" />
-      <span class="brand-mark-glow" />
-    </div>
-    <div class="brand-copy">
-      <p class="brand-kicker">Система ежедневного челленджа</p>
-      <h1>{{ title }}</h1>
-      <p v-if="subtitle" class="brand-subtitle">{{ subtitle }}</p>
+    <div class="hero-image" role="img" aria-label="Фоновое изображение челленджа">
+      <div class="hero-copy-wrap">
+        <div class="hero-brand" aria-hidden="true">
+          <img src="/logo.png" alt="" class="hero-brand-image" />
+        </div>
+        <div class="hero-copy">
+          <p class="brand-kicker">Система ежедневного челленджа</p>
+          <h1>{{ title }}</h1>
+          <p v-if="subtitle" class="brand-subtitle">{{ subtitle }}</p>
+        </div>
+      </div>
+      <div class="hero-scrim" />
     </div>
   </header>
 </template>
@@ -22,58 +26,123 @@ defineProps({
 <style scoped>
 .app-header {
   position: relative;
+  margin-left: calc(var(--edge-gutter, 0.85rem) * -1);
+  margin-right: calc(var(--edge-gutter, 0.85rem) * -1);
+  margin-bottom: -0.35rem;
+  z-index: 0;
+}
+
+.hero-image {
+  position: relative;
+  min-height: 14.2rem;
+  border-radius: 0 0 1.4rem 1.4rem;
+  overflow: hidden;
+  background-image: url('/background.png');
+  background-size: cover;
+  background-position: center;
+}
+
+.hero-copy-wrap {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 0.82rem;
+  padding: 0 0 1rem 0;
+  width: min(458px, 100%);
+  margin: 0 auto;
 }
 
-.brand-mark {
-  position: relative;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.95rem;
+.hero-copy {
+  min-width: 0;
+}
+
+.hero-brand {
+  width: 3.18rem;
+  height: 3.18rem;
+  border-radius: 1rem;
   overflow: hidden;
-  box-shadow: 0 10px 26px rgba(8, 30, 58, 0.2);
+  box-shadow: 0 10px 22px rgba(10, 30, 52, 0.24);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.9);
+  flex: 0 0 auto;
 }
 
-.brand-mark-image {
+.hero-brand-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.brand-mark-glow {
+.hero-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0));
+  background: linear-gradient(
+    180deg,
+    rgba(216, 237, 249, 0) 48%,
+    rgba(216, 237, 249, 0.52) 76%,
+    rgba(216, 237, 249, 0.92) 92%,
+    rgba(216, 237, 249, 1) 100%
+  );
   pointer-events: none;
-}
-
-.brand-copy {
-  min-width: 0;
 }
 
 .brand-kicker {
   margin: 0;
-  font-size: 0.66rem;
+  font-size: 0.58rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted-foreground);
+  color: rgba(32, 57, 83, 0.9);
+  text-shadow: 0 1px 2px rgba(248, 252, 255, 0.75);
 }
 
 h1 {
   margin: 0.1rem 0 0;
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.1rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  color: var(--foreground-strong);
+  color: rgba(22, 46, 74, 0.98);
+  text-shadow: 0 1px 2px rgba(246, 251, 255, 0.76);
 }
 
 .brand-subtitle {
-  margin: 0.24rem 0 0;
-  color: var(--muted-foreground);
-  font-size: 0.8rem;
+  margin: 0.14rem 0 0;
+  color: rgba(45, 69, 95, 0.88);
+  font-size: 0.74rem;
+  text-shadow: 0 1px 2px rgba(247, 252, 255, 0.74);
+}
+
+@media (min-width: 768px) {
+  .app-header {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .hero-image {
+    border-radius: 1.3rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-image {
+    min-height: 13rem;
+  }
+
+  .hero-copy-wrap {
+    padding: 0 0 1rem 0;
+    gap: 0.62rem;
+  }
+
+  .hero-brand {
+    width: 2.78rem;
+    height: 2.78rem;
+  }
+
+  h1 {
+    font-size: 1rem;
+  }
 }
 </style>

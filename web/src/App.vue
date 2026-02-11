@@ -368,12 +368,12 @@ async function onChangeChat(event) {
 
 <template>
   <div class="app-shell">
-    <div class="app-phone">
-      <AppHeader
-        title="G8 Adjumannya"
-        subtitle="Трекер челленджа"
-      />
+    <AppHeader
+      title="G8 Adjumannya"
+      subtitle="Трекер челленджа"
+    />
 
+    <div class="app-phone">
       <Alert v-if="!auth.isReady && !isDemo" variant="default">
         <AlertTitle>Нет доступа</AlertTitle>
         <AlertDescription>
@@ -567,6 +567,7 @@ async function onChangeChat(event) {
 <style scoped>
 .app-shell {
   width: 100%;
+  --edge-gutter: 0.85rem;
 }
 
 .anchor-target {
