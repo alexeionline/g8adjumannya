@@ -18,6 +18,11 @@
   min-height: 14.2rem;
   overflow: hidden;
   background-image: url('/background.png');
+  background-image: image-set(
+    url('/background.avif') type('image/avif'),
+    url('/background.webp') type('image/webp'),
+    url('/background.png') type('image/png')
+  );
   background-size: cover;
   background-position: center;
 }
