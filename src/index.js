@@ -129,6 +129,9 @@ bot.use(
   createCommandCleanupMiddleware({
     scheduleDeleteMessage,
     shortTtlMs: TEN_SECONDS_MS,
+    commandTtlMsByName: {
+      add: TEN_MINUTES_MS,
+    },
   })
 );
 

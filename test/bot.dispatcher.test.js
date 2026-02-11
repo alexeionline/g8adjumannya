@@ -37,6 +37,7 @@ test('createCommandCleanupMiddleware applies proper TTL policies', () => {
   const middleware = createCommandCleanupMiddleware({
     scheduleDeleteMessage: (ctx, ttl) => calls.push({ text: ctx.message.text, ttl }),
     shortTtlMs: 10_000,
+    commandTtlMsByName: { add: 600_000 },
   });
 
   let nextCalls = 0;
@@ -53,6 +54,7 @@ test('createCommandCleanupMiddleware applies proper TTL policies', () => {
   assert.deepEqual(calls, [
     { text: '/status', ttl: 10_000 },
     { text: '/record', ttl: 10_000 },
+    { text: '/add 10', ttl: 600_000 },
     { text: '/help', ttl: undefined },
   ]);
 });

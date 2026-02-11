@@ -12,7 +12,13 @@ function registerCommandHandler(bot, commandName, handler) {
   });
 }
 
-function createCommandCleanupMiddleware({ scheduleDeleteMessage, commandExclusions = ['add'], shortTtlCommands = ['status', 'record'], shortTtlMs }) {
+function createCommandCleanupMiddleware({
+  scheduleDeleteMessage,
+  commandExclusions = [],
+  shortTtlCommands = ['status', 'record'],
+  shortTtlMs,
+  commandTtlMsByName = {},
+}) {
   return (ctx, next) => {
     const msg = ctx.message;
     const text = msg && msg.text;
@@ -24,7 +30,9 @@ function createCommandCleanupMiddleware({ scheduleDeleteMessage, commandExclusio
     if (text && text.trim().startsWith('/')) {
       const command = text.trim().split(/\s+/)[0].slice(1);
       const commandName = command.split('@')[0].toLowerCase();
-      if (shortTtlCommands.includes(commandName)) {
+      if (Number.isFinite(commandTtlMsByName[commandName])) {
+        scheduleDeleteMessage(ctx, commandTtlMsByName[commandName]);
+      } else if (shortTtlCommands.includes(commandName)) {
         scheduleDeleteMessage(ctx, shortTtlMs);
       } else if (!commandExclusions.includes(commandName)) {
         scheduleDeleteMessage(ctx);
