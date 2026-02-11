@@ -114,4 +114,20 @@ const className = computed(() => [
   box-shadow: none;
   background: color-mix(in oklab, #008ccf 88%, white 12%);
 }
+
+.app-action-btn-fold {
+  color: var(--foreground-strong);
+  background: rgba(242, 247, 252, 0.9);
+  border: 1px solid rgba(16, 49, 87, 0.08);
+  min-height: 3rem;
+  width: 100%;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.app-action-btn-fold:hover {
+  transform: translateY(-1px);
+  background: rgba(234, 243, 250, 0.96);
+}
 </style>

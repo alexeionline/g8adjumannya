@@ -176,8 +176,16 @@ function elapsedTitle(prev, cur) {
           </li>
         </ul>
         <div v-if="items.length > TOP_LIMIT" class="show-more-wrap">
-          <AppActionButton type="button" size="sm" variant="subtle" class="show-more-btn" @click="showAll = !showAll">
-            {{ showAll ? 'Свернуть' : 'Показать всех' }}
+          <AppActionButton
+            type="button"
+            size="md"
+            variant="fold"
+            class="show-more-btn"
+            :title="showAll ? 'Свернуть' : 'Показать всех'"
+            :aria-label="showAll ? 'Свернуть' : 'Показать всех'"
+            @click="showAll = !showAll"
+          >
+            <span class="fold-icon">{{ showAll ? '▴' : '▾' }}</span>
           </AppActionButton>
         </div>
       </template>
@@ -339,13 +347,15 @@ function elapsedTitle(prev, cur) {
 
 .show-more-wrap {
   margin-top: 0.75rem;
-  display: flex;
-  justify-content: center;
+  display: block;
 }
 
 .show-more-btn {
-  min-width: 9rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  width: 100%;
+}
+
+.fold-icon {
+  color: #3f4a54;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55), 0 -1px 0 rgba(28, 38, 49, 0.28);
 }
 </style>
