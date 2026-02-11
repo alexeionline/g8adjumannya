@@ -345,19 +345,7 @@ function elapsedTitle(prev, cur) {
 
 .show-more-btn {
   min-width: 9rem;
-  border-radius: 999px;
-  border: 1px solid rgba(10, 88, 156, 0.26);
-  background: linear-gradient(145deg, rgba(239, 249, 255, 0.96), rgba(223, 241, 255, 0.94));
-  color: color-mix(in oklab, var(--foreground-strong) 85%, #0ea5e9 15%);
   font-weight: 700;
   letter-spacing: 0.01em;
-  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.12);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.show-more-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.18);
-  background: linear-gradient(145deg, rgba(226, 245, 255, 0.98), rgba(203, 233, 255, 0.94));
 }
 </style>
