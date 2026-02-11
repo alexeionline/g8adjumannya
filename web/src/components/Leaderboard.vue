@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import AppActionButton from '@/components/base/AppActionButton.vue'
+import AppTabButton from '@/components/base/AppTabButton.vue'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -74,16 +75,15 @@ watch(activeTab, () => {
       <CardTitle>Рекорды</CardTitle>
       <p class="leader-sub">{{ activeMeta.subtitle }}</p>
       <div class="leader-tabs" role="tablist" aria-label="Режим рекордов">
-        <button
+        <AppTabButton
           v-for="tab in tabs"
           :key="tab.id"
-          type="button"
-          class="leader-tab"
-          :class="{ 'leader-tab-active': activeTab === tab.id }"
+          :active="activeTab === tab.id"
+          variant="leader"
           @click="activeTab = tab.id"
         >
           {{ tab.label }}
-        </button>
+        </AppTabButton>
       </div>
     </CardHeader>
     <CardContent>
@@ -110,9 +110,9 @@ watch(activeTab, () => {
           </li>
         </ul>
         <div v-if="rankedItems.length > TOP_LIMIT" class="show-more-wrap">
-          <Button type="button" size="sm" class="show-more-btn" @click="showAll = !showAll">
+          <AppActionButton variant="subtle" size="sm" class="show-more-btn" @click="showAll = !showAll">
             {{ showAll ? 'Свернуть' : 'Показать всех' }}
-          </Button>
+          </AppActionButton>
         </div>
       </template>
       <div v-else class="leader-empty">{{ activeMeta.empty }}</div>
@@ -141,27 +141,6 @@ watch(activeTab, () => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-}
-
-.leader-tab {
-  border: 1px solid rgba(16, 49, 87, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--foreground-strong);
-  padding: 0.2rem 0.62rem;
-  font-size: 0.73rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
-.leader-tab:hover {
-  transform: translateY(-1px);
-}
-
-.leader-tab-active {
-  border-color: rgba(14, 165, 233, 0.52);
-  background: linear-gradient(145deg, rgba(234, 247, 255, 0.98), rgba(215, 238, 255, 0.92));
 }
 
 .leaderboard {
@@ -260,19 +239,7 @@ watch(activeTab, () => {
 
 .show-more-btn {
   min-width: 9rem;
-  border-radius: 999px;
-  border: 1px solid rgba(10, 88, 156, 0.26);
-  background: linear-gradient(145deg, rgba(239, 249, 255, 0.96), rgba(223, 241, 255, 0.94));
-  color: color-mix(in oklab, var(--foreground-strong) 85%, #0ea5e9 15%);
   font-weight: 700;
   letter-spacing: 0.01em;
-  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.12);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.show-more-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.18);
-  background: linear-gradient(145deg, rgba(226, 245, 255, 0.98), rgba(203, 233, 255, 0.94));
 }
 </style>

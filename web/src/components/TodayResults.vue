@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import AppActionButton from '@/components/base/AppActionButton.vue'
 import { Input } from '@/components/ui/input'
 import {
   AlertDialog,
@@ -156,9 +156,9 @@ function elapsedTitle(prev, cur) {
                       @keydown.enter.prevent="saveEdit"
                       @keydown.escape="closeEdit"
                     />
-                    <Button type="button" size="sm" @click="saveEdit">Сохранить</Button>
-                    <Button type="button" size="sm" variant="outline" @click="closeEdit">Отмена</Button>
-                    <Button type="button" size="sm" variant="destructive" @click="openDeleteDialog">Удалить</Button>
+                    <AppActionButton type="button" size="sm" variant="primary" @click="saveEdit">Сохранить</AppActionButton>
+                    <AppActionButton type="button" size="sm" variant="outline" @click="closeEdit">Отмена</AppActionButton>
+                    <AppActionButton type="button" size="sm" variant="danger" @click="openDeleteDialog">Удалить</AppActionButton>
                   </div>
                   <button
                     v-else
@@ -176,9 +176,9 @@ function elapsedTitle(prev, cur) {
           </li>
         </ul>
         <div v-if="items.length > TOP_LIMIT" class="show-more-wrap">
-          <Button type="button" size="sm" class="show-more-btn" @click="showAll = !showAll">
+          <AppActionButton type="button" size="sm" variant="subtle" class="show-more-btn" @click="showAll = !showAll">
             {{ showAll ? 'Свернуть' : 'Показать всех' }}
-          </Button>
+          </AppActionButton>
         </div>
       </template>
       <div v-else class="results-empty">

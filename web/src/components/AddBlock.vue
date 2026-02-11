@@ -1,6 +1,6 @@
 <script setup>
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import AppActionButton from '@/components/base/AppActionButton.vue'
 import { Input } from '@/components/ui/input'
 
 const props = defineProps({
@@ -33,21 +33,21 @@ const quickAdds = [5, 10, 15, 20, 25, 30]
           class="add-input"
           @keydown.enter.prevent="onSubmit"
         />
-        <Button type="button" class="add-submit" @click="onSubmit">
+        <AppActionButton type="button" variant="primary" class="add-submit" @click="onSubmit">
           Добавить
-        </Button>
+        </AppActionButton>
       </div>
 
       <div class="quick-row" role="group" aria-label="Быстрые значения">
-        <button
+        <AppActionButton
           v-for="value in quickAdds"
           :key="value"
-          type="button"
-          class="quick-pill"
+          variant="chip"
+          size="md"
           @click="onQuickAdd && onQuickAdd(value)"
         >
           +{{ value }}
-        </button>
+        </AppActionButton>
       </div>
     </CardContent>
   </Card>
@@ -91,26 +91,4 @@ const quickAdds = [5, 10, 15, 20, 25, 30]
   flex-wrap: wrap;
 }
 
-.quick-pill {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.38rem 0.72rem;
-  min-height: 2rem;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--foreground);
-  background: rgba(13, 153, 255, 0.11);
-  transition: transform 0.2s ease, background-color 0.2s ease;
-}
-
-.quick-pill:hover {
-  transform: translateY(-1px);
-  background: rgba(13, 153, 255, 0.17);
-}
-
-.quick-pill:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
-}
 </style>

@@ -6,6 +6,7 @@ import TodayResults from './components/TodayResults.vue'
 import Leaderboard from './components/Leaderboard.vue'
 import CalendarView from './components/CalendarView.vue'
 import LevelsBadges from './components/LevelsBadges.vue'
+import BlockActionButton from './components/base/BlockActionButton.vue'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert'
 import { useAuthStore } from './stores/auth'
@@ -433,18 +434,9 @@ async function onChangeChat(event) {
           </div>
 
           <div class="hero-metrics">
-            <button type="button" class="metric-pill metric-pill-button" @click="scrollToCalendar">
-              <span class="metric-label">Текущая серия</span>
-              <span class="metric-value">{{ data.currentStreak }} д</span>
-            </button>
-            <button type="button" class="metric-pill metric-pill-button" @click="scrollToCalendar">
-              <span class="metric-label">Лучшая серия</span>
-              <span class="metric-value">{{ data.bestStreak }} д</span>
-            </button>
-            <button type="button" class="metric-pill metric-pill-button" @click="scrollToBadges">
-              <span class="metric-label">Награды</span>
-              <span class="metric-value">{{ unlockedBadges }} из {{ allBadges.length }}</span>
-            </button>
+            <BlockActionButton label="Текущая серия" :value="`${data.currentStreak} д`" @click="scrollToCalendar" />
+            <BlockActionButton label="Лучшая серия" :value="`${data.bestStreak} д`" @click="scrollToCalendar" />
+            <BlockActionButton label="Награды" :value="`${unlockedBadges} из ${allBadges.length}`" @click="scrollToBadges" />
           </div>
         </CardContent>
       </Card>
@@ -526,14 +518,8 @@ async function onChangeChat(event) {
           </div>
         </CardHeader>
         <CardContent class="chat-context-metrics">
-          <button type="button" class="context-pill context-pill-button" @click="scrollToTodayResults">
-            <span class="context-label">Моё место сегодня</span>
-            <span class="context-value">{{ myRank ? `#${myRank}` : '—' }}</span>
-          </button>
-          <button type="button" class="context-pill context-pill-button" @click="scrollToLeaderboard">
-            <span class="context-label">Моё место в рекордах</span>
-            <span class="context-value">{{ myBestRank ? `#${myBestRank}` : '—' }}</span>
-          </button>
+          <BlockActionButton label="Моё место сегодня" :value="myRank ? `#${myRank}` : '—'" @click="scrollToTodayResults" />
+          <BlockActionButton label="Моё место в рекордах" :value="myBestRank ? `#${myBestRank}` : '—'" @click="scrollToLeaderboard" />
         </CardContent>
       </Card>
 
@@ -757,50 +743,6 @@ async function onChangeChat(event) {
   gap: 0.52rem;
 }
 
-.metric-pill {
-  border-radius: 0.84rem;
-  background: rgba(244, 249, 253, 0.94);
-  padding: 0.56rem 0.63rem;
-  display: grid;
-  gap: 0.22rem;
-  min-height: 3.2rem;
-}
-
-.metric-pill-button {
-  border: 0;
-  width: 100%;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.16s ease, background-color 0.16s ease;
-}
-
-.metric-pill-button:hover {
-  transform: translateY(-1px);
-  background: rgba(232, 244, 255, 0.98);
-}
-
-.metric-pill-button:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
-}
-
-.metric-label {
-  font-size: 0.62rem;
-  color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.metric-value {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--foreground-strong);
-}
-
 .chat-context-card {
   border: 0;
   box-shadow: var(--shadow-soft);
@@ -853,50 +795,6 @@ async function onChangeChat(event) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.52rem;
-}
-
-.context-pill {
-  border-radius: 0.84rem;
-  background: rgba(244, 249, 253, 0.94);
-  padding: 0.56rem 0.63rem;
-  display: grid;
-  gap: 0.22rem;
-  min-height: 3.2rem;
-}
-
-.context-pill-button {
-  border: 0;
-  width: 100%;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.16s ease, background-color 0.16s ease;
-}
-
-.context-pill-button:hover {
-  transform: translateY(-1px);
-  background: rgba(232, 244, 255, 0.98);
-}
-
-.context-pill-button:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
-}
-
-.context-label {
-  font-size: 0.62rem;
-  color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.context-value {
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: var(--foreground-strong);
 }
 
 .stats-card {
