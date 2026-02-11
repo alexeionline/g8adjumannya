@@ -265,7 +265,7 @@ export const useDataStore = defineStore('data', {
     async addCount(auth, userId, delta) {
       if (!userId || !Number.isFinite(delta)) {
         this.error = 'Введите количество повторений'
-        return
+        return false
       }
       this.loading = true
       this.error = ''
@@ -306,7 +306,7 @@ export const useDataStore = defineStore('data', {
 
           pack.recordsRows = buildRecordsFromStatus(pack.statusRows)
           this.syncFromDemoPack()
-          return
+          return true
         }
 
         await addPushups(auth, userId, delta)
@@ -316,8 +316,10 @@ export const useDataStore = defineStore('data', {
           this.loadHistory(auth, userId),
           this.loadHistoryApproaches(auth, userId),
         ])
+        return true
       } catch (error) {
         this.error = extractErrorMessage(error)
+        return false
       } finally {
         this.loading = false
       }

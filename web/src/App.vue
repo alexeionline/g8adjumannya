@@ -311,24 +311,27 @@ function calculateChallengeDays(dateStr) {
 
 async function submitAdd() {
   const delta = Number(addCountInput.value)
-  await addDelta(delta)
-  addCountInput.value = ''
+  const ok = await addDelta(delta)
+  if (ok) {
+    addCountInput.value = ''
+  }
+  return ok
 }
 
 async function addDelta(delta) {
   if (!Number.isFinite(delta) || delta <= 0) {
     data.error = 'Введите количество повторений'
-    return
+    return false
   }
   if (!historyUserId.value) {
     data.error = 'Укажи user_id в настройках'
-    return
+    return false
   }
-  await data.addCount(auth, Number(historyUserId.value), delta)
+  return data.addCount(auth, Number(historyUserId.value), delta)
 }
 
 async function quickAdd(delta) {
-  await addDelta(Number(delta))
+  return addDelta(Number(delta))
 }
 
 function moveMonth(direction) {
