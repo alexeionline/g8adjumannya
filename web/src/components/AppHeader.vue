@@ -1,6 +1,20 @@
+<script setup>
+function closeWebApp() {
+  const tg = window.Telegram?.WebApp
+  if (tg && typeof tg.close === 'function') {
+    tg.close()
+    return
+  }
+  window.close()
+}
+</script>
+
 <template>
   <header class="app-header">
     <div class="hero-image" role="img" aria-label="Фоновое изображение челленджа">
+      <button type="button" class="app-close-btn" aria-label="Закрыть приложение" @click="closeWebApp">
+        ✕
+      </button>
       <div class="hero-scrim" />
     </div>
   </header>
@@ -25,6 +39,30 @@
   );
   background-size: cover;
   background-position: center;
+}
+
+.app-close-btn {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.75rem;
+  z-index: 4;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: rgba(19, 45, 70, 0.9);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.app-close-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
 }
 
 .hero-scrim {
