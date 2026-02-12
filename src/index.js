@@ -68,11 +68,11 @@ bot.telegram
   });
 
 const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
-const TEN_MINUTES_MS = 10 * 60 * 1000;
-const TEN_SECONDS_MS = 10 * 1000;
-const sendAddReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
-const sendStatusReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
-const sendRecordReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, TEN_MINUTES_MS);
+const ONE_MINUTE_MS = 60 * 1000;
+const START_DEDUP_MS = 2_000;
+const sendAddReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, ONE_MINUTE_MS);
+const sendStatusReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, ONE_MINUTE_MS);
+const sendRecordReply = (ctx, text, extra) => sendEphemeral(ctx, text, extra, ONE_MINUTE_MS);
 const { parseAdd, parseAddNumbers, parseRecord, parseStatusDate } = createParsers(dayjs, ERRORS);
 const handleAdd = createAddHandler({
   dayjs,
@@ -120,20 +120,28 @@ const handleHide = createHideHandler({
   sendEphemeral,
 });
 
-bot.start((ctx) => {
-  if (!(ctx.message?.text || '').trim().startsWith('/start')) return;
-  return sendEphemeral(ctx, COMMANDS_TEXT);
-});
-
 bot.use(
   createCommandCleanupMiddleware({
     scheduleDeleteMessage,
-    shortTtlMs: TEN_SECONDS_MS,
+    shortTtlMs: ONE_MINUTE_MS,
     commandTtlMsByName: {
-      add: TEN_MINUTES_MS,
+      add: ONE_MINUTE_MS,
     },
   })
 );
+
+registerCommandHandler(bot, 'start', async (ctx) => {
+  const now = Date.now();
+  const lastStartAt = Number(ctx.session?.lastStartAt || 0);
+  if (now - lastStartAt < START_DEDUP_MS) {
+    return;
+  }
+  ctx.session = {
+    ...ctx.session,
+    lastStartAt: now,
+  };
+  return sendEphemeral(ctx, COMMANDS_TEXT);
+});
 
 registerCommandHandler(bot, 'add', async (ctx) => {
   const parsed = parseAdd(ctx.message && ctx.message.text);
