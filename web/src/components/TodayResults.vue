@@ -13,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import TodayProgress from './TodayProgress.vue'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -29,6 +28,8 @@ const editInput = ref('')
 const deleteDialogOpen = ref(false)
 const pendingDelete = ref(null)
 const showAll = ref(false)
+const expandedRows = ref({})
+const showApproaches = ref(false)
 const TOP_LIMIT = 5
 
 const displayedItems = computed(() => {
@@ -117,13 +118,101 @@ function elapsedTitle(prev, cur) {
   const text = formatElapsed(approachCreatedAt(prev), approachCreatedAt(cur))
   return text != null ? `${text} между подходами` : 'нет данных'
 }
+
+function progressPercent(value) {
+  const total = Number(value || 0)
+  const target = Math.max(1, Number(props.goal || 100))
+  return Math.max(0, Math.min(100, (total / target) * 100))
+}
+
+function isRowExpanded(itemKey) {
+  return Boolean(expandedRows.value[String(itemKey)])
+}
+
+function toggleRowExpanded(itemKey) {
+  const key = String(itemKey)
+  expandedRows.value = {
+    ...expandedRows.value,
+    [key]: !expandedRows.value[key],
+  }
+}
+
+function shouldShowApproaches(itemKey) {
+  return showApproaches.value || isRowExpanded(itemKey)
+}
+
+function toggleAllApproaches() {
+  showApproaches.value = !showApproaches.value
+  if (!showApproaches.value) {
+    expandedRows.value = {}
+  }
+}
+
+function onApproachBeforeEnter(el) {
+  el.style.height = '0px'
+  el.style.opacity = '0'
+  el.style.overflow = 'hidden'
+}
+
+function onApproachEnter(el) {
+  const height = `${el.scrollHeight}px`
+  el.style.transition = 'height 170ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 120ms ease'
+  void el.offsetHeight
+  el.style.height = height
+  el.style.opacity = '1'
+}
+
+function onApproachAfterEnter(el) {
+  el.style.height = 'auto'
+  el.style.overflow = ''
+  el.style.transition = ''
+}
+
+function onApproachBeforeLeave(el) {
+  el.style.height = `${el.scrollHeight}px`
+  el.style.opacity = '1'
+  el.style.overflow = 'hidden'
+}
+
+function onApproachLeave(el) {
+  el.style.transition = 'height 140ms cubic-bezier(0.4, 0, 0.2, 1), opacity 100ms ease'
+  void el.offsetHeight
+  el.style.height = '0px'
+  el.style.opacity = '0'
+}
+
+function onApproachAfterLeave(el) {
+  el.style.height = ''
+  el.style.opacity = ''
+  el.style.overflow = ''
+  el.style.transition = ''
+}
 </script>
 
 <template>
   <Card class="results-card">
     <CardHeader class="results-header">
-      <CardTitle>Результаты сегодня</CardTitle>
-      <p class="results-sub">Актуальный статус участников чата</p>
+      <div class="results-head-row">
+        <div>
+          <CardTitle>Результаты сегодня</CardTitle>
+          <p class="results-sub">Актуальный статус участников чата</p>
+        </div>
+        <div class="approach-toggle">
+          <span class="approach-toggle-label">Подходы</span>
+          <button
+            type="button"
+            class="approach-toggle-btn"
+            role="switch"
+            :aria-checked="showApproaches"
+            :title="showApproaches ? 'Подходы включены' : 'Подходы выключены'"
+            @click="toggleAllApproaches"
+          >
+            <span :class="['approach-toggle-track', { 'approach-toggle-track-on': showApproaches }]" aria-hidden="true">
+            <span class="approach-toggle-thumb" />
+            </span>
+          </button>
+        </div>
+      </div>
     </CardHeader>
     <CardContent>
       <template v-if="items.length">
@@ -131,14 +220,43 @@ function elapsedTitle(prev, cur) {
           <li
             v-for="item in displayedItems"
             :key="item.key"
-            :class="['today-row', { 'today-row-done': item.value >= goal }]"
+            class="today-row"
+            @click="!showApproaches && toggleRowExpanded(item.key)"
           >
-            <div class="row-rank">{{ item.rowRank }}</div>
-            <TodayProgress :value="item.value" :goal="goal" />
-            <div class="today-body">
-              <div class="today-title-row">
-                <div class="today-username">{{ item.label }}</div>
+            <div class="today-top">
+              <div class="row-rank">{{ item.rowRank }}</div>
+              <div class="today-top-main">
+                <div class="today-title-row">
+                  <div class="today-username">{{ item.label }}</div>
+                </div>
               </div>
+            </div>
+            <div
+              class="today-progress-strip"
+              role="progressbar"
+              :aria-valuemin="0"
+              :aria-valuemax="goal"
+              :aria-valuenow="item.value"
+              :aria-label="`${item.value} из ${goal}`"
+            >
+              <span class="today-progress-base" />
+              <span
+                v-if="item.value > 0"
+                :class="['today-progress-fill', { 'today-progress-fill-complete': item.value >= goal }]"
+                :style="{ width: `${progressPercent(item.value)}%` }"
+              >
+                <span class="today-progress-value">{{ item.value }}</span>
+              </span>
+            </div>
+            <transition
+              @before-enter="onApproachBeforeEnter"
+              @enter="onApproachEnter"
+              @after-enter="onApproachAfterEnter"
+              @before-leave="onApproachBeforeLeave"
+              @leave="onApproachLeave"
+              @after-leave="onApproachAfterLeave"
+            >
+              <div v-if="shouldShowApproaches(item.key)" class="today-bottom" @click.stop>
               <div class="today-approaches">
                 <template v-for="(approach, i) in item.approaches" :key="approach.id || i">
                   <span
@@ -153,12 +271,13 @@ function elapsedTitle(prev, cur) {
                       min="1"
                       max="1000"
                       class="today-approach-input"
+                      @click.stop
                       @keydown.enter.prevent="saveEdit"
                       @keydown.escape="closeEdit"
                     />
-                    <AppActionButton type="button" size="sm" variant="primary" @click="saveEdit">Сохранить</AppActionButton>
-                    <AppActionButton type="button" size="sm" variant="outline" @click="closeEdit">Отмена</AppActionButton>
-                    <AppActionButton type="button" size="sm" variant="danger" @click="openDeleteDialog">Удалить</AppActionButton>
+                    <AppActionButton type="button" size="sm" variant="primary" @click.stop="saveEdit">Сохранить</AppActionButton>
+                    <AppActionButton type="button" size="sm" variant="outline" @click.stop="closeEdit">Отмена</AppActionButton>
+                    <AppActionButton type="button" size="sm" variant="danger" @click.stop="openDeleteDialog">Удалить</AppActionButton>
                   </div>
                   <button
                     v-else
@@ -166,13 +285,17 @@ function elapsedTitle(prev, cur) {
                     class="approach-pill"
                     :class="{ 'approach-pill-passive': !canEditApproach(item.key, approach) }"
                     :title="canEditApproach(item.key, approach) ? 'Редактировать подход' : String(approachCount(approach))"
-                    @click="startEdit(item.key, i, { id: approachId(approach), count: approachCount(approach) })"
+                    @click.stop="startEdit(item.key, i, { id: approachId(approach), count: approachCount(approach) })"
                   >
                     {{ approachCount(approach) }}
                   </button>
                 </template>
+                <span v-if="!item.approaches || item.approaches.length === 0" class="today-approach-empty">
+                  Нет подходов
+                </span>
               </div>
             </div>
+            </transition>
           </li>
         </ul>
         <div v-if="items.length > TOP_LIMIT" class="show-more-wrap">
@@ -223,10 +346,73 @@ function elapsedTitle(prev, cur) {
   padding-bottom: 0.2rem;
 }
 
+.results-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
 .results-sub {
   margin: 0.25rem 0 0;
   font-size: 0.8rem;
   color: var(--muted-foreground);
+}
+
+.approach-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.46rem;
+  user-select: none;
+}
+
+.approach-toggle-label {
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.approach-toggle-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.approach-toggle-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.approach-toggle-track {
+  width: 2.15rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: rgba(70, 210, 255, 0.42);
+  padding: 0.12rem;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.18s ease;
+}
+
+.approach-toggle-thumb {
+  width: 0.96rem;
+  height: 0.96rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(13, 34, 55, 0.28);
+  transform: translateX(0);
+  transition: transform 0.18s ease;
+}
+
+.approach-toggle-track-on {
+  background: color-mix(in oklab, #46d2ff 86%, #25bab0 14%);
+}
+
+.approach-toggle-track-on .approach-toggle-thumb {
+  transform: translateX(0.95rem);
 }
 
 .today-list {
@@ -239,26 +425,42 @@ function elapsedTitle(prev, cur) {
 
 .today-row {
   display: grid;
-  grid-template-columns: 1.7rem auto 1fr;
-  gap: 0.65rem;
-  align-items: start;
-  padding: 0.72rem;
-  border-radius: 1rem;
-  background: rgba(240, 246, 252, 0.78);
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
+  border-radius: 0.7rem;
+  background: #f8f8f8;
   border: 1px solid rgba(16, 49, 87, 0.06);
   transition: transform 0.2s ease, background-color 0.2s ease;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .today-row:hover {
   transform: translateY(-1px);
 }
 
-.today-row-done {
-  background: linear-gradient(130deg, rgba(196, 248, 225, 0.82), rgba(240, 255, 250, 0.74));
+.today-top {
+  display: grid;
+  grid-template-columns: 1.7rem 1fr;
+  align-items: start;
+  gap: 0.5rem;
+  padding: 0.3rem;
+}
+
+.today-top-main {
+  min-width: 0;
+}
+
+.today-bottom {
+  padding: 0.4rem;
+  border-top: 1px solid rgba(16, 49, 87, 0.08);
+  background: rgba(234, 235, 232, 0.38);
+  cursor: default;
+  will-change: height, opacity;
 }
 
 .row-rank {
-  margin-top: 0.2rem;
   width: 1.35rem;
   height: 1.35rem;
   border-radius: 999px;
@@ -268,10 +470,6 @@ function elapsedTitle(prev, cur) {
   font-weight: 700;
   color: var(--foreground-strong);
   background: rgba(19, 56, 91, 0.1);
-}
-
-.today-body {
-  min-width: 0;
 }
 
 .today-title-row {
@@ -291,11 +489,16 @@ function elapsedTitle(prev, cur) {
 }
 
 .today-approaches {
-  margin-top: 0.45rem;
+  margin-top: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem;
+}
+
+.today-approach-empty {
+  font-size: 0.66rem;
+  color: var(--muted-foreground);
 }
 
 .today-approach-elapsed {
@@ -305,14 +508,14 @@ function elapsedTitle(prev, cur) {
 
 .approach-pill {
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   min-height: 1.4rem;
   padding: 0.14rem 0.54rem;
   font: inherit;
   font-size: 0.68rem;
   font-weight: 700;
-  color: var(--foreground);
-  background: rgba(10, 152, 255, 0.13);
+  color: rgba(20, 20, 20);
+  background: rgba(64, 64, 64, 0.08);
   transition: background-color 0.2s ease;
 }
 
@@ -334,6 +537,45 @@ function elapsedTitle(prev, cur) {
 
 .today-approach-input {
   width: 4.2rem;
+}
+
+.today-progress-strip {
+  position: relative;
+  height: 15px;
+}
+
+.today-progress-base {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  border-bottom-right-radius: 5px;
+  background: #eaebe8;
+}
+
+.today-progress-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 15px;
+  border-top-right-radius: 5px;
+  background: linear-gradient(90deg, var(--accent-strong), #46d2ff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 0.38rem 0 0.45rem;
+}
+
+.today-progress-fill-complete {
+  border-top-right-radius: 0;
+}
+
+.today-progress-value {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
 }
 
 .results-empty {
@@ -358,4 +600,5 @@ function elapsedTitle(prev, cur) {
   color: #3f4a54;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55), 0 -1px 0 rgba(28, 38, 49, 0.28);
 }
+
 </style>
