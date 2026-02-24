@@ -15,7 +15,9 @@ function createStatusHandler({
 
     const chatUserIds = await getSharedUserIdsByChat(ctx.chat.id);
     const statusRows = await getStatusByDateV2(chatUserIds, parsed.date);
-    const rows = statusRows.map((r) => ({ ...r, count: r.total }));
+    const rows = statusRows
+      .map((r) => ({ ...r, count: Number(r.total || 0) }))
+      .filter((r) => r.count > 0);
     if (!rows.length) {
       return sendEphemeral(ctx, errors.NO_RESULTS(parsed.label));
     }

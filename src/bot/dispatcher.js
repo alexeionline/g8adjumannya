@@ -44,7 +44,7 @@ function createCommandCleanupMiddleware({
 }
 
 async function dispatchPlainText(ctx, deps) {
-  const { parseAdd, parseAddNumbers, parseRecord, parseStatusDate, handleAdd, handleRecord, handleStatus, sendEphemeral, errors } = deps;
+  const { parseAddNumbers, handleAdd, sendEphemeral, errors } = deps;
   const text = ctx.message && ctx.message.text;
   if (!text || text.trim().startsWith('/')) {
     return;
@@ -74,20 +74,6 @@ async function dispatchPlainText(ctx, deps) {
     ctx.session.waitingForAdd = false;
     delete ctx.session.waitingForAddUntil;
     return handleAdd(ctx, parsed);
-  }
-
-  if (parseRecord(text)) {
-    return handleRecord(ctx);
-  }
-
-  const addParsed = parseAdd(text);
-  if (addParsed) {
-    return handleAdd(ctx, addParsed);
-  }
-
-  const parsed = parseStatusDate(text);
-  if (parsed) {
-    return handleStatus(ctx, parsed);
   }
 }
 

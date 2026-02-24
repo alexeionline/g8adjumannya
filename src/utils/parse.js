@@ -27,14 +27,33 @@ function createParsers(dayjs, errors) {
     }
     const values = [];
     for (const p of parts) {
-      if (!/^\d+$/.test(p)) {
+      if (/^\d+$/.test(p)) {
+        const n = Number.parseInt(p, 10);
+        if (n <= 0) {
+          return null;
+        }
+        values.push(n);
+        continue;
+      }
+
+      const mult = p.match(/^(\d+)\*(\d+)$/);
+      if (!mult) {
         return null;
       }
-      const n = Number.parseInt(p, 10);
-      if (n <= 0) {
+
+      const left = Number.parseInt(mult[1], 10);
+      const right = Number.parseInt(mult[2], 10);
+      if (left <= 0 || right <= 0) {
         return null;
       }
-      values.push(n);
+
+      if (left * right >= 500) {
+        return null;
+      }
+
+      for (let i = 0; i < right; i += 1) {
+        values.push(left);
+      }
     }
     const sum = values.reduce((a, b) => a + b, 0);
     const max = Math.max(...values);
@@ -47,7 +66,7 @@ function createParsers(dayjs, errors) {
     }
 
     const normalized = stripLeadingMention(text);
-    const match = normalized.match(/\/?add(?:@\w+)?\s+(.+)/i);
+    const match = normalized.match(/^\/add(?:@\w+)?\s+(.+)$/i);
     if (!match) {
       return null;
     }
@@ -61,7 +80,7 @@ function createParsers(dayjs, errors) {
     }
 
     const normalized = stripLeadingMention(text);
-    const match = normalized.match(/\/?status(?:@\w+)?(?:\s+(\d{2}\.\d{2}\.\d{4}))?/i);
+    const match = normalized.match(/^\/status(?:@\w+)?(?:\s+(\d{2}\.\d{2}\.\d{4}))?$/i);
     if (!match) {
       return null;
     }
@@ -84,7 +103,7 @@ function createParsers(dayjs, errors) {
     }
 
     const normalized = stripLeadingMention(text);
-    return /\/?record(?:@\w+)?\s*$/i.test(normalized);
+    return /^\/record(?:@\w+)?\s*$/i.test(normalized);
   }
 
   return {

@@ -242,13 +242,8 @@ registerCommandHandler(bot, 'web', async (ctx) => {
 
 bot.on('text', async (ctx) => {
   return dispatchPlainText(ctx, {
-    parseAdd,
     parseAddNumbers,
-    parseRecord,
-    parseStatusDate,
     handleAdd,
-    handleRecord,
-    handleStatus,
     sendEphemeral,
     errors: ERRORS,
   });
