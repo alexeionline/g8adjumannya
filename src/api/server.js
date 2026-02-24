@@ -246,7 +246,7 @@ function createApiApp() {
   app.post('/add', authMiddleware, async (req, res) => {
   const userId = Number(req.body.user_id);
   const delta = Number(req.body.delta);
-  if (!Number.isFinite(userId) || !Number.isFinite(delta) || delta < 0) {
+  if (!Number.isFinite(userId) || !Number.isFinite(delta) || delta <= 0) {
     return res.status(400).json({ error: 'user_id and delta are required' });
   }
 

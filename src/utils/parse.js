@@ -31,6 +31,9 @@ function createParsers(dayjs, errors) {
         return null;
       }
       const n = Number.parseInt(p, 10);
+      if (n <= 0) {
+        return null;
+      }
       values.push(n);
     }
     const sum = values.reduce((a, b) => a + b, 0);
