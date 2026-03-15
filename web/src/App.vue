@@ -21,6 +21,19 @@ const isDemo = import.meta.env.VITE_DEMO === '1'
 const monthCursor = ref(new Date())
 const historyUserId = ref('')
 const addCountInput = ref('')
+const authDebug = ref({
+  stage: 'boot',
+  source: 'unknown',
+  hasInitData: false,
+  hasLegacyToken: false,
+  hasV2Token: false,
+  apiBase: '',
+  v2ApiBase: '',
+  chatId: '',
+  userId: '',
+  selectedChatId: '',
+  details: '',
+})
 const badgesAnchorRef = ref(null)
 const todayResultsAnchorRef = ref(null)
 const leaderboardAnchorRef = ref(null)
@@ -50,6 +63,7 @@ function applyAuthCredentials({ apiBase, token, userId, chatId }) {
 }
 
 async function loadInitialData() {
+  authDebug.value.stage = 'loadAll'
   historyUserId.value = auth.defaultUserId || ''
   if (auth.selectedChatId) {
     data.selectedChatId = auth.selectedChatId
@@ -79,6 +93,19 @@ onMounted(async () => {
   const apiBaseV2 = params.get('api_base_v2')
   const chatId = params.get('chat_id')
   const v2ApiBase = apiBaseV2 || `${window.location.origin}/api/v2`
+  authDebug.value = {
+    stage: 'bootstrap',
+    source: 'unknown',
+    hasInitData: Boolean(window.Telegram?.WebApp?.initData),
+    hasLegacyToken: Boolean(token),
+    hasV2Token: Boolean(tokenV2),
+    apiBase: apiBase || window.location.origin,
+    v2ApiBase,
+    chatId: chatId || '',
+    userId: userId || '',
+    selectedChatId: auth.selectedChatId || '',
+    details: '',
+  }
   const v2Credentials = tokenV2
     ? {
         apiBase: v2ApiBase,
@@ -98,6 +125,8 @@ onMounted(async () => {
 
   const initData = window.Telegram?.WebApp?.initData || ''
   if (initData) {
+    authDebug.value.stage = 'v2_auth_request'
+    authDebug.value.source = 'initData'
     try {
       const authPayload = await authWithInitData(v2ApiBase, initData)
       applyAuthCredentials({
@@ -106,21 +135,55 @@ onMounted(async () => {
         userId: String(authPayload.user_id || userId || ''),
         chatId,
       })
+      authDebug.value.stage = 'v2_auth_ok'
+      authDebug.value.selectedChatId = auth.selectedChatId || ''
       auth.save()
     } catch (error) {
+      authDebug.value.stage = 'v2_auth_failed'
+      authDebug.value.details = error?.response?.data?.error || error?.message || 'Unauthorized'
       data.error = error?.response?.data?.error || error?.message || 'Unauthorized'
       if (v2Credentials) {
         data.error = ''
+        authDebug.value.stage = 'v2_token_fallback'
+        authDebug.value.source = 'v2_token'
         applyAuthCredentials(v2Credentials)
+        authDebug.value.selectedChatId = auth.selectedChatId || ''
         auth.save()
       }
     }
   } else if (v2Credentials) {
+    authDebug.value.stage = 'v2_token_bootstrap'
+    authDebug.value.source = 'v2_token'
     applyAuthCredentials(v2Credentials)
+    authDebug.value.selectedChatId = auth.selectedChatId || ''
     auth.save()
   }
 
   await loadInitialData()
+  authDebug.value.selectedChatId = auth.selectedChatId || ''
+  if (data.error) {
+    authDebug.value.details = data.error
+  } else {
+    authDebug.value.stage = 'ready'
+  }
+})
+
+const authDebugText = computed(() => {
+  if (data.error !== 'Unauthorized') {
+    return ''
+  }
+  return [
+    `stage=${authDebug.value.stage}`,
+    `source=${authDebug.value.source}`,
+    `hasInitData=${authDebug.value.hasInitData}`,
+    `hasLegacyToken=${authDebug.value.hasLegacyToken}`,
+    `hasV2Token=${authDebug.value.hasV2Token}`,
+    `apiBase=${auth.apiBase || authDebug.value.apiBase || '-'}`,
+    `selectedChatId=${auth.selectedChatId || authDebug.value.selectedChatId || '-'}`,
+    `chatIdFromUrl=${authDebug.value.chatId || '-'}`,
+    `userIdFromUrl=${authDebug.value.userId || '-'}`,
+    `details=${authDebug.value.details || '-'}`,
+  ].join('\n')
 })
 
 const todayDateKey = computed(() => data.currentDateKey || getLocalDateKey())
@@ -454,7 +517,10 @@ async function onChangeChat(event) {
 
       <Alert v-if="data.error" variant="destructive">
         <AlertTitle>Ошибка</AlertTitle>
-        <AlertDescription>{{ data.error }}</AlertDescription>
+        <AlertDescription>
+          <div>{{ data.error }}</div>
+          <pre v-if="authDebugText" class="auth-debug">{{ authDebugText }}</pre>
+        </AlertDescription>
       </Alert>
 
       <Card class="hero-card">
@@ -925,6 +991,18 @@ async function onChangeChat(event) {
   text-align: center;
   color: var(--foreground-strong);
   font-size: 0.86rem;
+}
+
+.auth-debug {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  border: 1px solid color-mix(in srgb, var(--destructive) 18%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--destructive) 8%, transparent);
 }
 
 @media (min-width: 620px) {
