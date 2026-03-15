@@ -52,35 +52,67 @@ const bot = new Telegraf(token);
 
 bot.use(session());
 
-bot.telegram
-  .setMyCommands([
-    { command: 'add', description: 'Добавить отжимания за сегодня' },
-    { command: 'status', description: 'Показать статус за дату' },
-    { command: 'record', description: 'Показать рекорды чата' },
-    { command: 'share', description: 'Связать результаты между чатами' },
-    { command: 'hide', description: 'Скрыть результаты в этом чате' },
-    { command: 'web', description: 'Открыть веб‑приложение' },
-    { command: 'force', description: 'Замотивировать участника' },
-    { command: 'help', description: 'Справка по боту' },
-  ])
-  .catch((error) => {
-    console.error('Failed to set bot commands:', error);
-  });
-
 const webAppUrl = process.env.WEB_APP_URL;
-if (webAppUrl) {
-  bot.telegram
-    .setChatMenuButton({
-      menu_button: {
-        type: 'web_app',
-        text: 'Open Web App',
-        web_app: { url: webAppUrl },
-      },
-    })
-    .catch((error) => {
-      console.error('Failed to set chat menu button:', error);
-    });
+
+function getWebAppMenuButton() {
+  if (!webAppUrl) {
+    return null;
+  }
+  return {
+    type: 'web_app',
+    text: 'Open Web App',
+    web_app: { url: webAppUrl },
+  };
 }
+
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function retryTelegramCall(label, fn, attempts = 3, delayMs = 2_000) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await fn();
+      return true;
+    } catch (error) {
+      const isLastAttempt = attempt === attempts;
+      console.error(`${label} failed (attempt ${attempt}/${attempts}):`, error);
+      if (isLastAttempt) {
+        return false;
+      }
+      await sleep(delayMs);
+    }
+  }
+  return false;
+}
+
+function configureBotUi() {
+  retryTelegramCall('set bot commands', () =>
+    bot.telegram.setMyCommands([
+      { command: 'add', description: 'Добавить отжимания за сегодня' },
+      { command: 'status', description: 'Показать статус за дату' },
+      { command: 'record', description: 'Показать рекорды чата' },
+      { command: 'share', description: 'Связать результаты между чатами' },
+      { command: 'hide', description: 'Скрыть результаты в этом чате' },
+      { command: 'web', description: 'Открыть веб‑приложение' },
+      { command: 'force', description: 'Замотивировать участника' },
+      { command: 'help', description: 'Справка по боту' },
+    ])
+  );
+
+  const menuButton = getWebAppMenuButton();
+  if (!menuButton) {
+    return;
+  }
+
+  retryTelegramCall('set default chat menu button', () =>
+    bot.telegram.setChatMenuButton({
+      menu_button: menuButton,
+    })
+  );
+}
+
+configureBotUi();
 
 const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
 const ONE_MINUTE_MS = 60 * 1000;
@@ -155,6 +187,24 @@ registerCommandHandler(bot, 'start', async (ctx) => {
     ...ctx.session,
     lastStartAt: now,
   };
+
+  const isPrivate = ctx.chat && ctx.chat.type === 'private';
+  const menuButton = getWebAppMenuButton();
+  if (isPrivate && menuButton) {
+    retryTelegramCall(`set chat menu button for ${ctx.chat.id}`, () =>
+      ctx.telegram.setChatMenuButton({
+        chat_id: ctx.chat.id,
+        menu_button: menuButton,
+      })
+    );
+
+    return sendEphemeral(ctx, COMMANDS_TEXT, {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Open Web App', web_app: { url: webAppUrl } }]],
+      },
+    });
+  }
+
   return sendEphemeral(ctx, COMMANDS_TEXT);
 });
 
