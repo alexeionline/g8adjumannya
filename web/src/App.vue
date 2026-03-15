@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from './components/ui/alert'
 import { useAuthStore } from './stores/auth'
 import { useDataStore } from './stores/data'
 import { buildBadgesMetrics, buildChallengeBadges } from './lib/badges'
+import { authWithInitData } from './api'
 
 const auth = useAuthStore()
 const data = useDataStore()
@@ -32,6 +33,34 @@ function getLocalDateKey() {
   ).padStart(2, '0')}`
 }
 
+function applyAuthCredentials({ apiBase, token, userId, chatId }) {
+  if (apiBase) {
+    auth.apiBase = apiBase
+  }
+  if (token) {
+    auth.token = token
+  }
+  if (userId) {
+    auth.defaultUserId = userId
+  }
+  if (chatId) {
+    auth.selectedChatId = chatId
+    data.selectedChatId = chatId
+  }
+}
+
+async function loadInitialData() {
+  historyUserId.value = auth.defaultUserId || ''
+  if (auth.selectedChatId) {
+    data.selectedChatId = auth.selectedChatId
+  }
+  if (!auth.isReady) {
+    return
+  }
+  data.error = ''
+  await data.loadAll(auth, historyUserId.value || auth.defaultUserId)
+}
+
 onMounted(async () => {
   if (isDemo) {
     historyUserId.value = String(data.demoUserId || '')
@@ -49,45 +78,49 @@ onMounted(async () => {
   const apiBase = params.get('api_base')
   const apiBaseV2 = params.get('api_base_v2')
   const chatId = params.get('chat_id')
-
-  // Prefer v2 credentials when provided; keep v1 fallback for backward compatibility.
-  if (tokenV2) {
-    auth.token = tokenV2
-    auth.apiBase = apiBaseV2 || `${window.location.origin}/api/v2`
-  } else {
-    if (apiBase) {
-      auth.apiBase = apiBase
-    }
-    if (token) {
-      auth.token = token
-    }
-  }
-  if (userId) {
-    auth.defaultUserId = userId
-  }
-  if (chatId) {
-    auth.selectedChatId = chatId
-    data.selectedChatId = chatId
-  }
+  const v2ApiBase = apiBaseV2 || `${window.location.origin}/api/v2`
+  const v2Credentials = tokenV2
+    ? {
+        apiBase: v2ApiBase,
+        token: tokenV2,
+        userId,
+        chatId,
+      }
+    : null
 
   if (token || tokenV2 || userId || apiBase || apiBaseV2 || chatId) {
-    auth.save()
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
   if (!auth.apiBase) {
     auth.apiBase = window.location.origin
+  }
+
+  const initData = window.Telegram?.WebApp?.initData || ''
+  if (initData) {
+    try {
+      const authPayload = await authWithInitData(v2ApiBase, initData)
+      applyAuthCredentials({
+        apiBase: v2ApiBase,
+        token: authPayload.token,
+        userId: String(authPayload.user_id || userId || ''),
+        chatId,
+      })
+      auth.save()
+    } catch (error) {
+      data.error = error?.response?.data?.error || error?.message || 'Unauthorized'
+      if (v2Credentials) {
+        data.error = ''
+        applyAuthCredentials(v2Credentials)
+        auth.save()
+      }
+    }
+  } else if (v2Credentials) {
+    applyAuthCredentials(v2Credentials)
     auth.save()
   }
 
-  historyUserId.value = auth.defaultUserId || ''
-  if (auth.selectedChatId) {
-    data.selectedChatId = auth.selectedChatId
-  }
-
-  if (auth.isReady) {
-    await data.loadAll(auth, historyUserId.value || auth.defaultUserId)
-  }
+  await loadInitialData()
 })
 
 const todayDateKey = computed(() => data.currentDateKey || getLocalDateKey())

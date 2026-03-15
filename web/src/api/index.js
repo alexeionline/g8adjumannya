@@ -6,6 +6,12 @@ function requireAuth(auth) {
   }
 }
 
+export async function authWithInitData(apiBase, initData) {
+  const client = createApiClient({ apiBase, token: '' })
+  const { data } = await client.post('/auth', { init_data: initData })
+  return data
+}
+
 export async function fetchStatus(auth, date) {
   requireAuth(auth)
   const client = createApiClient(auth)
