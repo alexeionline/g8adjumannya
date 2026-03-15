@@ -13,7 +13,9 @@ async function start() {
     console.log(`Server listening on ${port}`);
   });
 
-  await startBot({ skipInitDb: true });
+  startBot({ skipInitDb: true }).catch((error) => {
+    console.error('Bot startup failed:', error);
+  });
 }
 
 start().catch((error) => {
