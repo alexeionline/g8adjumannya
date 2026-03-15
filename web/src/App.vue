@@ -124,6 +124,15 @@ onMounted(async () => {
   }
 
   const initData = window.Telegram?.WebApp?.initData || ''
+  if (!initData && !v2Credentials) {
+    auth.clear()
+    data.error = 'Сессия не получена. Открой WebApp заново из Telegram через /web.'
+    authDebug.value.stage = 'missing_session'
+    authDebug.value.source = 'none'
+    authDebug.value.details = 'No initData and no v2_token in URL'
+    return
+  }
+
   if (initData) {
     authDebug.value.stage = 'v2_auth_request'
     authDebug.value.source = 'initData'
