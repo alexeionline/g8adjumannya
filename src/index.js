@@ -170,6 +170,7 @@ const handleHide = createHideHandler({
 bot.use(
   createCommandCleanupMiddleware({
     scheduleDeleteMessage,
+    commandExclusions: ['start'],
     shortTtlMs: ONE_MINUTE_MS,
     commandTtlMsByName: {
       add: ONE_MINUTE_MS,
@@ -198,7 +199,7 @@ registerCommandHandler(bot, 'start', async (ctx) => {
       })
     );
 
-    return sendEphemeral(ctx, COMMANDS_TEXT, {
+    return ctx.reply(COMMANDS_TEXT, {
       reply_markup: {
         inline_keyboard: [[{ text: 'Open Web App', web_app: { url: webAppUrl } }]],
       },
