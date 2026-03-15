@@ -67,6 +67,21 @@ bot.telegram
     console.error('Failed to set bot commands:', error);
   });
 
+const webAppUrl = process.env.WEB_APP_URL;
+if (webAppUrl) {
+  bot.telegram
+    .setChatMenuButton({
+      menu_button: {
+        type: 'web_app',
+        text: 'Open Web App',
+        web_app: { url: webAppUrl },
+      },
+    })
+    .catch((error) => {
+      console.error('Failed to set chat menu button:', error);
+    });
+}
+
 const { sendEphemeral, scheduleDeleteMessage } = createDeletionHelpers(bot, 30_000);
 const ONE_MINUTE_MS = 60 * 1000;
 const START_DEDUP_MS = 2_000;
